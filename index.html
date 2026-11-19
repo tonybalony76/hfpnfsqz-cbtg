@@ -3339,10 +3339,12 @@ document.addEventListener('pointerdown',firstPointerDown,true);
   if (new URLSearchParams(location.search).get('sw') === '0') return;
   if (!(location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')) return;
   try {
-    /* Absolute: <base href> points at the asset CDN, so even a leading-slash
-       path would resolve to cdn.jsdelivr.net and be rejected as cross-origin. */
-    navigator.serviceWorker.register(location.origin + '/sw.js', {
-      scope: location.origin + '/',
+    /* Keep the service worker inside this GitHub Pages project path.
+       Use location.href because the document's <base> points at the asset CDN. */
+    var swUrl = new URL('sw.js', location.href);
+    var scopeUrl = new URL('.', location.href);
+    navigator.serviceWorker.register(swUrl.href, {
+      scope: scopeUrl.pathname,
       updateViaCache: 'none'
     }).catch(function (error) {
       console.error('Service worker registration failed:', error);
