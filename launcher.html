@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Geometry Dash Webport</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;background:#111;color:#f5f5f5;font:16px system-ui,Arial,sans-serif;display:grid;place-items:center;padding:22px}
+main{width:min(560px,100%);text-align:center}
+h1{font-size:clamp(25px,6vw,38px);margin:0 0 10px}
+p{color:#c8c8c8;line-height:1.5}
+#status{min-height:48px;margin:22px 0 10px}
+.track{height:12px;background:#333;border-radius:99px;overflow:hidden;margin:14px 0}
+#bar{height:100%;width:0;background:#70d7ff;transition:width .18s}
+button{border:0;border-radius:9px;padding:13px 24px;font-size:17px;font-weight:700;cursor:pointer;background:#70d7ff;color:#101820}
+button:disabled{opacity:.55;cursor:wait}
+small{display:block;color:#999;margin-top:16px}
+</style>
+</head>
+<body>
+<main>
+<h1>Geometry Dash</h1>
+<p id="status">Preparing the game files in the background…</p>
+<div class="track"><div id="bar"></div></div>
+<p id="detail">Checking which files are already cached…</p>
+<button id="launch">Launch game</button>
+<small>You can launch before preloading finishes. Any remaining files will download in the game.</small>
+</main>
+<script>
+(function(){
+'use strict';
+var BASE='https://cdn.jsdelivr.net/gh/Ale7208/geometry-dash-wasm/';
+var MANIFEST=BASE+'gd_assets.json';
+var GAME='https://cdn.jsdelivr.net/gh/tonybalony76/hfpnfsqz-cbtg@main/index.html';
+var status=document.getElementById('status');
+var detail=document.getElementById('detail');
+var bar=document.getElementById('bar');
+var launch=document.getElementById('launch');
+var controller=new AbortController();
+var stopped=false,finished=false,done=0,total=0,failed=0;
+function say(a,b){status.textContent=a;detail.textContent=b||'';}
+function update(){
+var pct=total?Math.round(done/total*100):0;
+bar.style.width=pct+'%';
+say(finished?'Game files are ready!':(stopped?'Preloading paused.': 'Preloading game files…'),done+' of '+total+' files cached'+(failed?' · '+failed+' could not be cached':''));
+}
+async function preload(){
+if(!('caches' in window)){say('Background caching is unavailable in this browser.','You can still launch; the game will download its files normally.');return;}
+try{
+var cache=await caches.open('gdwasm-assets');
+var response=await fetch(MANIFEST,{cache:'no-cache',mode:'cors',signal:controller.signal});
+if(!response.ok)throw new Error('Manifest request failed ('+response.status+')');
+var manifest=await response.json();
+try{await cache.put(MANIFEST,response.clone());}catch(e){}
+var entries=[manifest.loader,manifest.wasm].concat(manifest.data.chunks||[]);
+var urls=entries.map(function(entry){return new URL(entry.url,BASE).href;});
+total=urls.length;
+var pending=[];
+for(var i=0;i<urls.length;i++){
+if(await cache.match(urls[i]))done++;
+else pending.push(urls[i]);
+}
+update();
+var cursor=0;
+async function worker(){
+while(!stopped){
+var index=cursor++;
+if(index>=pending.length)return;
+var url=pending[index],ok=false,lastError=null;
+for(var attempt=0;attempt<3&&!stopped;attempt++){
+try{
+var asset=await fetch(url,{mode:'cors',cache:'force-cache',signal:controller.signal});
+if(!asset.ok)throw new Error('HTTP '+asset.status);
+if(asset.type==='opaque')throw new Error('CDN did not allow cache access');
+await cache.put(url,asset.clone());
+ok=true;break;
+}catch(e){lastError=e;if(stopped)return;await new Promise(function(resolve){setTimeout(resolve,350*(attempt+1));});}
+}
+if(ok)done++;else failed++;
+update();
+}
+}
+var connection=navigator.connection||navigator.mozConnection||navigator.webkitConnection;
+var workers=connection&&typeof connection.downlink==='number'?(connection.downlink<1.5?2:(connection.downlink<5?4:6)):6;
+var pool=[];
+for(var w=0;w<Math.min(workers,pending.length);w++)pool.push(worker());
+await Promise.all(pool);
+if(!stopped){
+finished=true;
+update();
+}
+}catch(e){
+if(!stopped)say('Preloading could not finish.','You can still launch; the game will fetch any missing files itself.');
+}
+}
+launch.addEventListener('click',function(){
+var tab=window.open('about:blank','_blank');
+if(!tab){say('The new tab was blocked.','Allow pop-ups for this page, then click Launch game again.');return;}
+stopped=true;
+controller.abort();
+launch.disabled=true;
+say('Opening Geometry Dash…','Loading the game page.');
+fetch(GAME+'?launcher=1',{cache:'no-cache'})
+.then(function(r){if(!r.ok)throw new Error('Game page request failed ('+r.status+')');return r.text();})
+.then(function(source){
+tab.document.open();
+tab.document.write(source);
+tab.document.close();
+say('Game opened in a new tab.','You can close this panel.');
+})
+.catch(function(e){
+try{tab.document.body.textContent='Could not open the game: '+e.message+'. Please close this tab and try again.';}catch(_){}
+launch.disabled=false;
+say('Could not open the game.','Please try again.');
+});
+});
+var connection=navigator.connection||navigator.mozConnection||navigator.webkitConnection;
+if(connection&&connection.saveData){say('Ready to preload when you choose.','Data Saver is enabled, so automatic downloading is paused.');}
+else if(connection&&/^(slow-2g|2g)$/.test(connection.effectiveType||'')){say('Ready to preload when you choose.','Your connection is slow, so automatic downloading is paused.');}
+else preload();
+})();
+</script>
+</body>
+</html>
