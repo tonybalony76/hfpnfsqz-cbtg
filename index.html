@@ -850,7 +850,7 @@ button,input,textarea{touch-action:manipulation;}
   'use strict';
   var manifestPromise;
   var pending = Object.create(null);
-  var maxJobs = 2;
+  var maxJobs = 5;
   try {
     var q = new URLSearchParams(location.search).get('jobs');
     if (q) { var n = parseInt(q, 10); if (n >= 1 && n <= 8) maxJobs = n; }
@@ -1002,7 +1002,7 @@ button,input,textarea{touch-action:manipulation;}
         report('data', loaded, expectedSize);
       }
     }
-    try { await Promise.all([worker(), worker()]); }
+    try { await Promise.all([worker(), worker(), worker(), worker()]); }
     catch (e) { controller.abort(); throw e; }
     return out.buffer;
   }
