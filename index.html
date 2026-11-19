@@ -850,8 +850,12 @@ button,input,textarea{touch-action:manipulation;}
   'use strict';
   var manifestPromise;
   var pending = Object.create(null);
-  var maxJobs = 5;
+  var maxJobs = 7;
   try {
+    var connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+    if (connection && typeof connection.downlink === 'number') {
+      maxJobs = connection.downlink < 1.5 ? 3 : (connection.downlink < 5 ? 5 : 7);
+    }
     var q = new URLSearchParams(location.search).get('jobs');
     if (q) { var n = parseInt(q, 10); if (n >= 1 && n <= 8) maxJobs = n; }
   } catch (e) {  }
@@ -1002,7 +1006,10 @@ button,input,textarea{touch-action:manipulation;}
         report('data', loaded, expectedSize);
       }
     }
-    try { await Promise.all([worker(), worker(), worker(), worker()]); }
+    var workerCount = Math.max(1, Math.min(6, maxJobs - 1));
+    var workers = [];
+    for (var w = 0; w < workerCount; w++) workers.push(worker());
+    try { await Promise.all(workers); }
     catch (e) { controller.abort(); throw e; }
     return out.buffer;
   }
