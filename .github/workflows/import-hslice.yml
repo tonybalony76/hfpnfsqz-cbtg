@@ -44,6 +44,8 @@ jobs:
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          # Sync any commits (such as GitHub Pages deployments) made after checkout.
+          git pull --rebase origin main
           git add fnf-hslice/
           if git diff --cached --quiet; then
             echo "H-slice files are already up to date."
@@ -51,5 +53,3 @@ jobs:
           fi
           git commit -m "Add prebuilt H-slice browser game"
           git push
-
-# Trigger the first import run after installing this workflow.
