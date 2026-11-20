@@ -1,0 +1,53 @@
+name: Import H-slice game files
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/import-hslice.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out this games repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+
+      - name: Download and verify the prebuilt H-slice release
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -L --fail --retry 3 \
+            "https://github.com/AverageCatUser/H-slice/releases/download/Release/h-slice.zip" \
+            -o /tmp/h-slice.zip
+          echo "f1c77c08f6f750cd7403eb42f0a7492a12a786513db84025e2f9f40ae189a6c9  /tmp/h-slice.zip" | sha256sum -c -
+
+      - name: Extract game into its own folder
+        shell: bash
+        run: |
+          set -euo pipefail
+          unzip -q /tmp/h-slice.zip -d /tmp/hslice
+          test -f /tmp/hslice/h-slice/index.html
+          mkdir -p fnf-hslice
+          cp -a /tmp/hslice/h-slice/. fnf-hslice/
+          test -f fnf-hslice/index.html
+
+      - name: Commit the game assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add fnf-hslice/
+          if git diff --cached --quiet; then
+            echo "H-slice files are already up to date."
+            exit 0
+          fi
+          git commit -m "Add prebuilt H-slice browser game"
+          git push
