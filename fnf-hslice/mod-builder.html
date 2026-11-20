@@ -1,0 +1,1655 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>H-Slice Mod Builder</title>
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #0c0716; --panel: #140d22; --panel2: #1a1230; --raise: #221840;
+    --line: #2b2040; --line2: #3b2d57;
+    --text: #efe9f8; --dim: #a597bf; --faint: #6e6288;
+    --pink: #ff5ea8; --pink2: #ff8cc2; --cyan: #5dd6ff;
+    --ok: #74e0a0; --warn: #ffc463; --err: #ff6f7d;
+    --a1: #c24b99; --a2: #00d8f0; --a3: #3ee638; --a4: #f9393f;
+    --r: 12px;
+    --mono: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
+    --sans: "Trebuchet MS", "Segoe UI", system-ui, -apple-system, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    min-height: 100vh; background: var(--bg); color: var(--text);
+    font: 15px/1.55 var(--sans);
+    background-image: radial-gradient(1100px 520px at 12% -10%, rgba(255,94,168,.10), transparent 60%),
+                      radial-gradient(900px 480px at 110% 0%, rgba(93,214,255,.07), transparent 60%);
+    background-attachment: fixed;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  button, input, select { font: inherit; color: inherit; }
+  code, .mono { font-family: var(--mono); font-size: .92em; }
+  [hidden] { display: none !important; }
+
+  /* ---------- header */
+  .top { max-width: 1180px; margin: 0 auto; padding: 22px 22px 14px;
+    padding-top: calc(22px + env(safe-area-inset-top, 0px));
+    display: flex; align-items: center; gap: 22px; flex-wrap: wrap; }
+  .brand { display: flex; align-items: baseline; gap: 10px; margin-right: auto; }
+  .brand .logo { font-weight: 900; font-size: 26px; letter-spacing: .02em; color: var(--pink);
+    text-shadow: 0 2px 0 #000, 0 0 18px rgba(255,94,168,.35); }
+  .brand .sub { font-weight: 700; font-size: 17px; color: var(--text); opacity: .9; }
+  .tabs { display: flex; gap: 4px; background: var(--panel); border: 1px solid var(--line);
+    padding: 4px; border-radius: 999px; }
+  .tabs button { border: 0; background: none; padding: 7px 16px; border-radius: 999px;
+    color: var(--dim); cursor: pointer; font-weight: 700; }
+  .tabs button[aria-selected="true"] { background: var(--raise); color: var(--text);
+    box-shadow: inset 0 0 0 1px var(--line2); }
+  .privacy { width: 100%; color: var(--faint); font-size: 13px; }
+  .stripe { max-width: 1180px; margin: 0 auto 26px; padding: 0 22px; display: flex; gap: 6px; }
+  .stripe i { height: 3px; flex: 1; border-radius: 3px; }
+  .stripe i:nth-child(1) { background: var(--a1); } .stripe i:nth-child(2) { background: var(--a2); }
+  .stripe i:nth-child(3) { background: var(--a3); } .stripe i:nth-child(4) { background: var(--a4); }
+
+  main { max-width: 1180px; margin: 0 auto; padding: 0 22px 60px; }
+  .tab { display: none; } .tab.on { display: block; }
+  .intro { color: var(--dim); max-width: 760px; margin: 0 0 18px; }
+  .intro b { color: var(--text); }
+
+  /* ---------- drop zone */
+  .drop { position: relative; border: 2px dashed var(--line2); border-radius: 16px;
+    background: linear-gradient(180deg, rgba(255,255,255,.015), rgba(255,255,255,0));
+    padding: 34px 22px 30px; text-align: center; transition: border-color .15s, background .15s, transform .15s;
+    outline: none; }
+  .drop:focus-visible { border-color: var(--cyan); }
+  .drop.over { border-color: var(--pink); background: rgba(255,94,168,.06); transform: scale(1.005); }
+  .drop.compact { padding: 16px 18px; display: flex; align-items: center; gap: 16px; text-align: left; }
+  .drop.compact .arrows { width: 44px; height: 44px; margin: 0; flex: none; }
+  .drop.compact .drop-sub { display: none; }
+  .drop.compact .drop-actions { margin: 0 0 0 auto; }
+  .arrows { width: 72px; height: 72px; margin: 0 auto 12px; display: block; }
+  .drop-title { font-size: 20px; font-weight: 800; }
+  .drop.compact .drop-title { font-size: 16px; }
+  .drop-sub { color: var(--dim); margin: 6px auto 0; max-width: 640px; font-size: 14px; }
+  .drop-actions { display: flex; gap: 10px; justify-content: center; margin-top: 16px; flex-wrap: wrap; }
+  .busy { position: absolute; inset: 0; border-radius: 14px; background: rgba(12,7,22,.82);
+    display: grid; place-items: center; font-weight: 700; color: var(--pink2); }
+
+  .btn { border: 1px solid var(--line2); background: var(--panel2); padding: 9px 16px; border-radius: 10px;
+    cursor: pointer; font-weight: 700; transition: background .12s, border-color .12s, transform .06s; }
+  .btn:hover:not(:disabled) { background: var(--raise); border-color: #4c3b70; }
+  .btn:active:not(:disabled) { transform: translateY(1px); }
+  .btn:disabled { opacity: .45; cursor: not-allowed; }
+  .btn.primary { background: var(--pink); border-color: var(--pink); color: #22061a; }
+  .btn.primary:hover:not(:disabled) { background: var(--pink2); border-color: var(--pink2); }
+  .btn.ghost { background: none; }
+  .btn.small { padding: 5px 11px; font-size: 13px; border-radius: 8px; }
+  .btn.big { padding: 13px 24px; font-size: 16px; border-radius: 12px; }
+
+  /* ---------- workspace */
+  .work { display: grid; grid-template-columns: 300px 1fr; gap: 18px; margin-top: 18px; align-items: start; }
+  @media (max-width: 900px) { .work { grid-template-columns: 1fr; } }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); }
+  .card + .card { margin-top: 14px; }
+  .card h3 { margin: 0; font-size: 13px; letter-spacing: .08em; text-transform: uppercase; color: var(--dim);
+    padding: 13px 16px; border-bottom: 1px solid var(--line); display: flex; align-items: center; gap: 8px; }
+  .card h3 .count { margin-left: auto; color: var(--faint); letter-spacing: 0; text-transform: none; font-weight: 400; }
+  .card .body { padding: 14px 16px; }
+
+  .files { position: sticky; top: 12px; }
+  .fgroup + .fgroup { border-top: 1px solid var(--line); }
+  .fgroup-h { padding: 9px 14px 5px; font-size: 12px; color: var(--faint); text-transform: uppercase; letter-spacing: .07em; }
+  .frow { display: flex; align-items: center; gap: 8px; padding: 5px 10px 5px 14px; font-size: 13px; }
+  .frow:hover { background: rgba(255,255,255,.02); }
+  .frow .fname { font-family: var(--mono); font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; min-width: 0; }
+  .frow .fsize { color: var(--faint); font-size: 12px; flex: none; }
+  .x { border: 0; background: none; color: var(--faint); cursor: pointer; padding: 0 4px; font-size: 16px; line-height: 1; flex: none; }
+  .x:hover { color: var(--err); }
+  .files-foot { padding: 10px 14px; border-top: 1px solid var(--line); display: flex; justify-content: space-between; align-items: center; }
+
+  /* ---------- chips & text */
+  .chip { display: inline-flex; align-items: center; gap: 5px; padding: 2px 9px; border-radius: 999px;
+    font-size: 12.5px; font-weight: 700; border: 1px solid transparent; white-space: nowrap; }
+  .chip.ok { color: var(--ok); background: rgba(116,224,160,.08); border-color: rgba(116,224,160,.22); }
+  .chip.warn { color: var(--warn); background: rgba(255,196,99,.08); border-color: rgba(255,196,99,.22); }
+  .chip.err { color: var(--err); background: rgba(255,111,125,.08); border-color: rgba(255,111,125,.25); }
+  .chip.dim { color: var(--dim); background: rgba(255,255,255,.03); border-color: var(--line); }
+  .chip.pink { color: var(--pink2); background: rgba(255,94,168,.08); border-color: rgba(255,94,168,.25); }
+  .muted { color: var(--dim); } .faint { color: var(--faint); }
+  .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+
+  /* ---------- song card */
+  .fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 14px; }
+  @media (max-width: 620px) { .fields { grid-template-columns: 1fr; } }
+  label.f { display: block; }
+  label.f span { display: block; font-size: 12px; color: var(--faint); margin-bottom: 4px; text-transform: uppercase; letter-spacing: .06em; }
+  .inp { width: 100%; background: var(--bg); border: 1px solid var(--line2); border-radius: 9px; padding: 8px 11px; }
+  .inp:focus { outline: none; border-color: var(--cyan); box-shadow: 0 0 0 3px rgba(93,214,255,.14); }
+  .inp.bad { border-color: var(--err); }
+  .with-prefix { display: flex; align-items: stretch; }
+  .with-prefix .pre { background: var(--panel2); border: 1px solid var(--line2); border-right: 0; border-radius: 9px 0 0 9px;
+    padding: 8px 9px; color: var(--faint); font-family: var(--mono); font-size: 13px; display: flex; align-items: center; }
+  .with-prefix .inp { border-radius: 0 9px 9px 0; font-family: var(--mono); }
+  .color-row { display: flex; gap: 8px; align-items: center; }
+  input[type=color] { width: 44px; height: 38px; padding: 2px; border-radius: 9px; border: 1px solid var(--line2); background: var(--bg); cursor: pointer; }
+  .facts { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+  .diffs { margin-top: 14px; display: flex; flex-direction: column; gap: 8px; }
+  .diffline { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 14px; }
+  .diffline .vname { min-width: 88px; color: var(--faint); font-size: 12px; text-transform: uppercase; letter-spacing: .06em; }
+  .dchip { background: var(--panel2); border: 1px solid var(--line2); border-radius: 9px; padding: 5px 11px; font-size: 13px; }
+  .dchip b { color: var(--text); }
+  .dchip .faint { font-size: 12px; }
+
+  /* ---------- characters */
+  .char { display: grid; grid-template-columns: 92px 1fr; gap: 14px; padding: 14px 16px; }
+  .char + .char { border-top: 1px solid var(--line); }
+  .pv { width: 92px; height: 92px; border-radius: 12px; background:
+      linear-gradient(45deg, #181028 25%, transparent 25%) 0 0/14px 14px,
+      linear-gradient(-45deg, #181028 25%, transparent 25%) 0 7px/14px 14px,
+      linear-gradient(45deg, transparent 75%, #181028 75%) 7px -7px/14px 14px,
+      linear-gradient(-45deg, transparent 75%, #181028 75%) -7px 0/14px 14px, #120b1f;
+    border: 1px solid var(--line); display: grid; place-items: center; overflow: hidden; }
+  .pv canvas { width: 92px; height: 92px; display: block; }
+  .pv .glyph { font-size: 12px; color: var(--faint); text-align: center; padding: 6px; line-height: 1.3; }
+  .char-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .char-name { font-weight: 800; font-size: 17px; }
+  .char-role { color: var(--faint); font-size: 13px; }
+  .char-src { margin-left: auto; min-width: 220px; }
+  .char-src select { width: 100%; }
+  .anims { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 8px 12px; margin-top: 12px; }
+  .anim { display: flex; flex-direction: column; gap: 3px; }
+  .anim .an { font-size: 12px; color: var(--faint); font-family: var(--mono); display: flex; gap: 6px; align-items: center; }
+  .anim .an .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--faint); }
+  .anim.ok .an .dot { background: var(--ok); } .anim.missing .an .dot { background: var(--warn); }
+  select.inp { padding: 6px 9px; font-size: 13px; cursor: pointer; }
+  .janims { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  .char-note { margin-top: 10px; font-size: 13.5px; color: var(--dim); }
+  .char-note.warn { color: var(--warn); }
+
+  /* ---------- lists */
+  .list { list-style: none; margin: 0; padding: 0; }
+  .list li { display: flex; gap: 10px; align-items: baseline; padding: 6px 0; font-size: 14px; }
+  .list li + li { border-top: 1px dashed var(--line); }
+  .list .arrow { color: var(--faint); }
+  .ic { width: 18px; flex: none; text-align: center; font-weight: 900; }
+  .ic.ok { color: var(--ok); } .ic.warn { color: var(--warn); } .ic.err { color: var(--err); } .ic.dim { color: var(--faint); }
+  .bgpick { display: grid; grid-template-columns: 180px 1fr; gap: 14px; align-items: start; }
+  @media (max-width: 620px) { .bgpick { grid-template-columns: 1fr; } }
+  .thumb { width: 180px; aspect-ratio: 16/9; border-radius: 10px; background: #120b1f center/cover no-repeat;
+    border: 1px solid var(--line); display: grid; place-items: center; color: var(--faint); font-size: 12px; }
+  .checks li .ic { width: 18px; }
+  .allgood { color: var(--ok); font-weight: 700; }
+
+  /* ---------- build bar & result */
+  .buildbar { position: sticky; bottom: 0; margin-top: 18px; background: rgba(20,13,34,.92); backdrop-filter: blur(8px);
+    border: 1px solid var(--line2); border-radius: 14px; padding: 14px 16px; display: flex; align-items: center; gap: 14px;
+    flex-wrap: wrap; box-shadow: 0 -10px 30px rgba(0,0,0,.35); z-index: 5;
+    margin-bottom: env(safe-area-inset-bottom, 0px); }
+  .buildbar .status { font-weight: 700; }
+  .buildbar .status small { display: block; font-weight: 400; color: var(--dim); font-size: 13px; }
+  .buildbar .btn.big { margin-left: auto; }
+  .result { margin-top: 18px; border-color: rgba(116,224,160,.35); background: linear-gradient(180deg, rgba(116,224,160,.06), transparent 70%), var(--panel); }
+  .result .done { font-size: 19px; font-weight: 800; color: var(--ok); }
+  .steps { counter-reset: s; list-style: none; padding: 0; margin: 14px 0 0; }
+  .steps li { counter-increment: s; position: relative; padding: 4px 0 12px 40px; }
+  .steps li::before { content: counter(s); position: absolute; left: 0; top: 2px; width: 26px; height: 26px; border-radius: 50%;
+    display: grid; place-items: center; background: var(--raise); border: 1px solid var(--line2); font-weight: 800; font-size: 13px; }
+  .codeline { display: flex; align-items: center; gap: 10px; background: var(--bg); border: 1px solid var(--line2);
+    border-radius: 10px; padding: 9px 9px 9px 13px; margin-top: 8px; }
+  .codeline code { flex: 1; overflow-x: auto; white-space: nowrap; color: var(--cyan); }
+  .tree { font-family: var(--mono); font-size: 12.5px; color: var(--dim); background: var(--bg); border: 1px solid var(--line);
+    border-radius: 10px; padding: 10px 13px; margin-top: 10px; white-space: pre; overflow-x: auto; }
+  .toast { position: fixed; left: 50%; bottom: 26px; transform: translateX(-50%) translateY(20px); opacity: 0;
+    background: var(--raise); border: 1px solid var(--line2); padding: 9px 16px; border-radius: 999px; font-weight: 700;
+    transition: opacity .18s, transform .18s; pointer-events: none; z-index: 20; }
+  .toast.on { opacity: 1; transform: translateX(-50%) translateY(0); }
+  .etable { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+  .etable td { padding: 7px 8px; border-top: 1px solid var(--line); vertical-align: top; }
+  .etable tr:first-child td { border-top: 0; }
+  .etable td.src { font-family: var(--mono); font-size: 12.5px; }
+  .etable td.dst { font-family: var(--mono); font-size: 12.5px; color: var(--cyan); }
+  .table-wrap { overflow-x: auto; }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<div id="app">
+  <header class="top">
+    <div class="brand"><span class="logo">H-SLICE</span><span class="sub">mod builder</span></div>
+    <nav class="tabs" role="tablist" aria-label="What to build">
+      <button role="tab" data-tab="mod" aria-selected="true">Song mod</button>
+      <button role="tab" data-tab="engine" aria-selected="false">Engine assets</button>
+    </nav>
+    <div class="privacy">Runs entirely in your browser. Nothing is uploaded anywhere.</div>
+  </header>
+  <div class="stripe" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+
+  <main>
+    <!-- ================================================================ SONG MOD -->
+    <section class="tab on" id="tab-mod" role="tabpanel">
+      <p class="intro">Drop in <b>everything for one song</b> — from a V-Slice mod, a Psych mod, or a
+        <code>.fnfc</code> — and get back a finished mod folder that plays in H-Slice from a double-click.
+        You'll see exactly what was found, and what's missing, before anything is built.</p>
+      <div class="drop" id="drop-mod" tabindex="0" data-scope="mod">
+        <svg class="arrows" viewBox="0 0 72 72" aria-hidden="true">
+          <g stroke="#000" stroke-width="3" stroke-linejoin="round">
+            <path d="M8 24 L20 12 L20 19 L30 19 L30 29 L20 29 L20 36 Z" fill="#c24b99"/>
+            <path d="M48 8 L60 20 L53 20 L53 30 L43 30 L43 20 L36 20 Z" fill="#3ee638"/>
+            <path d="M24 64 L12 52 L19 52 L19 42 L29 42 L29 52 L36 52 Z" fill="#00d8f0"/>
+            <path d="M64 48 L52 60 L52 53 L42 53 L42 43 L52 43 L52 36 Z" fill="#f9393f"/>
+          </g>
+        </svg>
+        <div class="drop-title">Drop your song's files here</div>
+        <div class="drop-sub">Chart <code>.json</code> files or a <code>.fnfc</code> · spritesheets (<code>.png</code> + <code>.xml</code>) ·
+          character <code>.json</code> · <code>Inst</code> / <code>Voices</code> audio · a background image · icons.
+          Whole folders and <code>.zip</code> files work too.</div>
+        <div class="drop-actions">
+          <button class="btn" data-act="pick-files" data-scope="mod">Choose files</button>
+          <button class="btn ghost" data-act="pick-dir" data-scope="mod">Choose a folder</button>
+        </div>
+      </div>
+      <div class="work" id="work-mod" hidden>
+        <aside class="files card" id="files-mod"></aside>
+        <div class="review" id="review-mod"></div>
+      </div>
+      <div class="buildbar" id="bar-mod" hidden></div>
+      <div class="result card" id="result-mod" hidden></div>
+    </section>
+
+    <!-- ================================================================ ENGINE -->
+    <section class="tab" id="tab-engine" role="tabpanel">
+      <p class="intro">Assets that belong to <b>H-Slice itself</b>, not to one mod: the note arrows
+        (<code>NOTE_assets</code>), ratings and combo numbers, Boyfriend and Girlfriend's sheets, health icons,
+        the title logo, menu music and menu sounds. You get an <code>engineassets</code> folder to merge into yours.</p>
+      <div class="drop" id="drop-engine" tabindex="0" data-scope="engine">
+        <svg class="arrows" viewBox="0 0 72 72" aria-hidden="true">
+          <g stroke="#000" stroke-width="3" stroke-linejoin="round" opacity=".9">
+            <path d="M8 24 L20 12 L20 19 L30 19 L30 29 L20 29 L20 36 Z" fill="#c24b99"/>
+            <path d="M48 8 L60 20 L53 20 L53 30 L43 30 L43 20 L36 20 Z" fill="#3ee638"/>
+            <path d="M24 64 L12 52 L19 52 L19 42 L29 42 L29 52 L36 52 Z" fill="#00d8f0"/>
+            <path d="M64 48 L52 60 L52 53 L42 53 L42 43 L52 43 L52 36 Z" fill="#f9393f"/>
+          </g>
+        </svg>
+        <div class="drop-title">Drop engine assets here</div>
+        <div class="drop-sub"><code>NOTE_assets.png</code> + <code>.xml</code> · <code>sick.png</code>, <code>good.png</code>… ·
+          <code>num0.png</code>–<code>num9.png</code> · <code>BOYFRIEND.png</code>, <code>GF_assets.png</code> ·
+          <code>icon-bf.png</code> · <code>logo.png</code> · <code>gameover.png</code> + <code>gameOver.ogg</code> · <code>freakyMenu.ogg</code> · <code>scrollMenu.ogg</code>…</div>
+        <div class="drop-actions">
+          <button class="btn" data-act="pick-files" data-scope="engine">Choose files</button>
+          <button class="btn ghost" data-act="pick-dir" data-scope="engine">Choose a folder</button>
+        </div>
+      </div>
+      <div class="work" id="work-engine" hidden>
+        <aside class="files card" id="files-engine"></aside>
+        <div class="review" id="review-engine"></div>
+      </div>
+      <div class="buildbar" id="bar-engine" hidden></div>
+      <div class="result card" id="result-engine" hidden></div>
+    </section>
+  </main>
+
+  <input type="file" id="pick-files" multiple hidden>
+  <input type="file" id="pick-dir" webkitdirectory directory multiple hidden>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+</div>
+
+<script>
+"use strict";
+/* ============================================================================
+   H-SLICE MOD BUILDER
+   Core  — pure logic: reading files, working out what they are, building the
+           mod. No DOM, so it can be tested on its own.
+   UI    — everything you click.
+   ========================================================================= */
+
+const Core = (() => {
+  const td = new TextDecoder('utf-8'), te = new TextEncoder();
+
+  // ------------------------------------------------------------ names
+  const base   = p => String(p).replace(/\\/g, '/').split('/').pop();
+  const stemOf = p => base(p).replace(/\.[^.]*$/, '');
+  const extOf  = p => { const m = /\.([^./]+)$/.exec(base(p)); return m ? m[1].toLowerCase() : ''; };
+  const low    = s => String(s == null ? '' : s).toLowerCase();
+  const slug   = s => low(s).normalize('NFKD').replace(/[\u0300-\u036f]/g, '')
+                        .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+  const safe   = s => String(s).replace(/[^A-Za-z0-9_.-]+/g, '_').replace(/^_+|_+$/g, '') || 'file';
+  const squash = s => low(s).replace(/[^a-z0-9]/g, '');
+  const uniq   = a => [...new Set(a)];
+  const fmtSize = n => n < 1024 ? n + ' B' : n < 1048576 ? (n / 1024).toFixed(n < 10240 ? 1 : 0) + ' KB'
+                                                          : (n / 1048576).toFixed(1) + ' MB';
+
+  const IMG = ['png', 'jpg', 'jpeg', 'webp', 'gif'];
+  const AUD = ['ogg', 'mp3', 'wav', 'm4a', 'opus', 'flac', 'aac'];
+  const SONG_AUD = ['ogg', 'mp3', 'wav'];                 // what the engine looks for
+  const DIFF_ORDER = ['easy', 'normal', 'hard', 'erect', 'nightmare'];
+  const KNOWN_DIFFS = DIFF_ORDER.concat(['insane', 'expert', 'hell', 'extreme', 'canon', 'harder',
+                                         'unfair', 'crazy', 'impossible', 'hardest', 'mania']);
+  const SING = ['singLEFT', 'singDOWN', 'singUP', 'singRIGHT'];
+  const BUILTIN = ['bf', 'gf'];                            // compiled into the engine
+  const PALETTE = ['#af66ce', '#6b8f3a', '#31b0d1', '#d1603f', '#c24b99', '#3aa37a', '#e0a33c', '#5b6ee1'];
+  const colorFor = s => { let h = 0; for (const c of String(s)) h = (h * 31 + c.charCodeAt(0)) >>> 0; return PALETTE[h % PALETTE.length]; };
+  const rgbHex = a => '#' + a.slice(0, 3).map(v => (Math.max(0, Math.min(255, v | 0))).toString(16).padStart(2, '0')).join('');
+  const diffRank = d => { const i = DIFF_ORDER.indexOf(low(d)); return i < 0 ? 99 : i; };
+  const sortDiffs = ds => ds.slice().sort((a, b) => diffRank(a) - diffRank(b));
+
+  // JSON.stringify is valid JS except for two line-separator characters
+  const js = v => JSON.stringify(v).replace(/\u2028/g, '\\u2028').replace(/\u2029/g, '\\u2029');
+
+  // ------------------------------------------------------------ zip (write)
+  const CRC = (() => { const t = new Uint32Array(256);
+    for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; }
+    return t; })();
+  function crc32(u8) { let c = 0xFFFFFFFF; for (let i = 0; i < u8.length; i++) c = CRC[(c ^ u8[i]) & 255] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; }
+
+  /* Stored, not compressed: audio and PNGs are compressed already, and a
+     plain archive opens instantly everywhere. */
+  function writeZip(items) {
+    const now = new Date();
+    const dtime = (now.getHours() << 11) | (now.getMinutes() << 5) | (now.getSeconds() >> 1);
+    const ddate = (Math.max(0, now.getFullYear() - 1980) << 9) | ((now.getMonth() + 1) << 5) | now.getDate();
+    const parts = [], central = [];
+    let offset = 0;
+    for (const it of items) {
+      const name = te.encode(it.path);
+      const data = it.dir ? new Uint8Array(0) : it.data;
+      const crc = it.dir ? 0 : crc32(data), size = data.length;
+      const lh = new DataView(new ArrayBuffer(30));
+      lh.setUint32(0, 0x04034b50, true); lh.setUint16(4, 20, true); lh.setUint16(6, 0x0800, true);
+      lh.setUint16(8, 0, true); lh.setUint16(10, dtime, true); lh.setUint16(12, ddate, true);
+      lh.setUint32(14, crc, true); lh.setUint32(18, size, true); lh.setUint32(22, size, true);
+      lh.setUint16(26, name.length, true); lh.setUint16(28, 0, true);
+      parts.push(new Uint8Array(lh.buffer), name, data);
+      const ch = new DataView(new ArrayBuffer(46));
+      ch.setUint32(0, 0x02014b50, true); ch.setUint16(4, 20, true); ch.setUint16(6, 20, true);
+      ch.setUint16(8, 0x0800, true); ch.setUint16(10, 0, true); ch.setUint16(12, dtime, true); ch.setUint16(14, ddate, true);
+      ch.setUint32(16, crc, true); ch.setUint32(20, size, true); ch.setUint32(24, size, true);
+      ch.setUint16(28, name.length, true); ch.setUint16(30, 0, true); ch.setUint16(32, 0, true);
+      ch.setUint16(34, 0, true); ch.setUint16(36, 0, true); ch.setUint32(38, it.dir ? 0x10 : 0, true);
+      ch.setUint32(42, offset, true);
+      central.push(new Uint8Array(ch.buffer), name);
+      offset += 30 + name.length + size;
+    }
+    const cdSize = central.reduce((n, p) => n + p.length, 0);
+    const end = new DataView(new ArrayBuffer(22));
+    end.setUint32(0, 0x06054b50, true); end.setUint16(8, items.length, true); end.setUint16(10, items.length, true);
+    end.setUint32(12, cdSize, true); end.setUint32(16, offset, true);
+    return new Blob([...parts, ...central, new Uint8Array(end.buffer)], { type: 'application/zip' });
+  }
+
+  // ------------------------------------------------------------ zip (read) — for .fnfc
+  async function inflateRaw(u8) {
+    if (typeof DecompressionStream === 'undefined')
+      throw new Error('this browser can\'t unzip — update it, or extract the file yourself and drop the contents');
+    const out = new Blob([u8]).stream().pipeThrough(new DecompressionStream('deflate-raw'));
+    return new Uint8Array(await new Response(out).arrayBuffer());
+  }
+  async function unzip(u8) {
+    const dv = new DataView(u8.buffer, u8.byteOffset, u8.byteLength);
+    let eocd = -1;
+    for (let i = u8.length - 22; i >= Math.max(0, u8.length - 65557); i--)
+      if (dv.getUint32(i, true) === 0x06054b50) { eocd = i; break; }
+    if (eocd < 0) throw new Error('not a zip file');
+    const count = dv.getUint16(eocd + 10, true);
+    let p = dv.getUint32(eocd + 16, true);
+    const out = [];
+    for (let k = 0; k < count; k++) {
+      if (dv.getUint32(p, true) !== 0x02014b50) throw new Error('the zip is damaged');
+      const flags = dv.getUint16(p + 8, true), method = dv.getUint16(p + 10, true);
+      const csize = dv.getUint32(p + 20, true);
+      const nlen = dv.getUint16(p + 28, true), xlen = dv.getUint16(p + 30, true), clen = dv.getUint16(p + 32, true);
+      const lho = dv.getUint32(p + 42, true);
+      const name = td.decode(u8.subarray(p + 46, p + 46 + nlen));
+      p += 46 + nlen + xlen + clen;
+      if (name.endsWith('/') || /(^|\/)__MACOSX\//.test(name) || base(name).startsWith('._')) continue;
+      if (flags & 1) throw new Error(name + ' is password-protected');
+      const start = lho + 30 + dv.getUint16(lho + 26, true) + dv.getUint16(lho + 28, true);
+      const raw = u8.subarray(start, start + csize);
+      if (method === 0) out.push({ name, data: raw.slice() });
+      else if (method === 8) out.push({ name, data: await inflateRaw(raw) });
+      else throw new Error(name + ' uses a compression this tool can\'t read (method ' + method + ')');
+    }
+    return out;
+  }
+
+  // ------------------------------------------------------------ sparrow
+  const ENT = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'" };
+  const unent = s => s.replace(/&(#x[0-9a-f]+|#\d+|[a-z]+);/gi, (m, e) =>
+    e[0] === '#' ? String.fromCodePoint(e[1] === 'x' || e[1] === 'X' ? parseInt(e.slice(2), 16) : parseInt(e.slice(1), 10))
+                 : (ENT[low(e)] !== undefined ? ENT[low(e)] : m));
+
+  /* Read by scanning the attributes, not with an XML parser: sheets often start
+     with a BOM or carry stray characters that make a strict parser refuse the
+     whole file. The attributes are all that's needed. */
+  function parseSparrow(text) {
+    const bom = text.charCodeAt(0) === 0xFEFF;
+    const t = text.replace(/^\uFEFF/, '');
+    const frames = [];
+    const re = /<SubTexture\b([^>]*?)\/?>/g;
+    let m;
+    while ((m = re.exec(t))) {
+      const a = {};
+      const ar = /([\w:-]+)\s*=\s*(?:"([^"]*)"|'([^']*)')/g;
+      let q;
+      while ((q = ar.exec(m[1]))) a[q[1]] = unent(q[2] !== undefined ? q[2] : q[3]);
+      const num = k => (a[k] === undefined || a[k] === '') ? null : parseFloat(a[k]);
+      const w = num('width') || 0, h = num('height') || 0;
+      frames.push({ name: a.name || '', x: num('x') || 0, y: num('y') || 0, w, h,
+                    fx: num('frameX') || 0, fy: num('frameY') || 0,
+                    fw: num('frameWidth') != null ? num('frameWidth') : w,
+                    fh: num('frameHeight') != null ? num('frameHeight') : h,
+                    rot: a.rotated === 'true' });
+    }
+    return { frames, bom, rotated: frames.some(f => f.rot) };
+  }
+
+  // the engine's own grouping and matching rules, so what you see here is what you get
+  function prefixList(frames) {
+    const counts = new Map();
+    for (const fr of frames) {
+      const m = /^(.*?)[ _-]?\d+$/.exec(fr.name);
+      const p = m ? m[1] : fr.name;
+      counts.set(p, (counts.get(p) || 0) + 1);
+    }
+    return [...counts].map(([prefix, count]) => ({ prefix, count }));
+  }
+  function framesFor(frames, prefix, indices) {
+    const p = low(prefix);
+    let got = frames.filter(fr => {
+      if (!low(fr.name).startsWith(p)) return false;
+      const rest = fr.name.slice(prefix.length);
+      return rest === '' || /^[ _\-]?\d+$/.test(rest);
+    });
+    if (!got.length) got = frames.filter(fr => low(fr.name).startsWith(p));
+    got = got.slice().sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
+    if (indices && indices.length) got = indices.map(i => got[i]).filter(Boolean);
+    return got;
+  }
+  function autoAnims(prefixes) {
+    const pres = prefixes.map(p => p.prefix).sort((a, b) => a.length - b.length || a.localeCompare(b));
+    const dirOf = t => /\bleft\b/.test(t) ? 0 : /\bdown\b/.test(t) ? 1 : /\bup\b/.test(t) ? 2 : /\bright\b/.test(t) ? 3 : -1;
+    const out = {}, taken = new Set();
+    for (const p of pres) {
+      const t = ' ' + low(p).replace(/[_-]/g, ' ') + ' ';
+      const d = dirOf(t), miss = /\bmiss\b/.test(t), dance = /\bdanc/.test(t);
+      let anim = null;
+      if (d >= 0 && !dance) anim = SING[d] + (miss ? 'miss' : '');
+      else if (dance && d === 0) anim = 'danceLeft';
+      else if (dance && d === 3) anim = 'danceRight';
+      else if (dance || /\bidle\b/.test(t)) anim = 'idle';
+      if (!anim || taken.has(anim)) continue;
+      taken.add(anim); out[anim] = p;
+    }
+    return out;
+  }
+  /* Frame tables in the engine's compact form: [[prefix, [idx,x,y,w,h,fx,fy,fw,fh,...]]].
+     Loaded with HSLICE.sheet(), so no XML is ever parsed in the browser. */
+  function compactFrames(frames) {
+    const g = new Map();
+    for (const f of frames) {
+      const m = /^(.*?)(\d+)$/.exec(f.name);
+      const pre = m ? m[1] : f.name, idx = m ? parseInt(m[2], 10) : -1;
+      if (!g.has(pre)) g.set(pre, []);
+      g.get(pre).push(idx, f.x, f.y, f.w, f.h, f.fx, f.fy, f.fw, f.fh);
+    }
+    return [...g];
+  }
+
+  // ------------------------------------------------------------ what a file is
+  function jsonKind(j, name) {
+    if (!j || typeof j !== 'object' || Array.isArray(j)) return 'unknown';
+    if (low(stemOf(name)) === 'events') return 'events';
+    if (j.playData || (j.songName !== undefined && j.timeChanges)) return 'vs-meta';
+    if (j.notes && typeof j.notes === 'object' && !Array.isArray(j.notes)) return 'vs-chart';
+    if (j.song && typeof j.song === 'object' && Array.isArray(j.song.notes)) return 'legacy';
+    if (Array.isArray(j.notes) && (j.bpm !== undefined || typeof j.song === 'string')) return 'legacy';
+    if (Array.isArray(j.animations) && (j.image !== undefined || j.assetPath !== undefined || j.renderType ||
+        j.healthicon !== undefined || j.healthIcon !== undefined || j.flip_x !== undefined)) return 'char';
+    if (Array.isArray(j.props) || (j.characters && typeof j.characters === 'object' &&
+        (j.characters.bf || j.characters.dad || j.characters.gf))) return 'stage';
+    if (Array.isArray(j.boyfriend) && (Array.isArray(j.opponent) || Array.isArray(j.girlfriend))) return 'psych-stage';
+    if (j.songId !== undefined && j.version !== undefined && !j.notes) return 'manifest';
+    if ((j.song && Array.isArray(j.song.events)) || (Array.isArray(j.events) && !j.notes)) return 'events';
+    return 'unknown';
+  }
+
+  let uidN = 0;
+  function makeEntry(path, bytes, from) {
+    const e = { uid: 'f' + (++uidN), path: String(path).replace(/\\/g, '/'), name: base(path),
+                ext: extOf(path), size: bytes.length, bytes, kind: 'skip', from: from || '' };
+    if (e.ext === 'json') {
+      try { e.json = JSON.parse(td.decode(bytes).replace(/^\uFEFF/, '')); e.kind = 'json'; e.jk = jsonKind(e.json, e.name); }
+      catch (err) { e.kind = 'bad'; e.why = 'not valid JSON — ' + String(err.message).split('\n')[0]; }
+    } else if (e.ext === 'xml') {
+      const text = td.decode(bytes);
+      if (/<SubTexture\b/i.test(text)) {
+        e.kind = 'xml'; e.sheet = parseSparrow(text);
+        // TextDecoder quietly strips a BOM, so look at the raw bytes
+        if (bytes[0] === 0xEF && bytes[1] === 0xBB && bytes[2] === 0xBF) e.sheet.bom = true;
+      }
+      else e.why = 'an XML file without Sparrow frames';
+    } else if (IMG.includes(e.ext)) e.kind = 'image';
+    else if (AUD.includes(e.ext)) e.kind = 'audio';
+    else if (['lua', 'hx', 'hxs', 'hxc', 'hscript'].includes(e.ext)) e.why = 'scripts don\'t run in H-Slice';
+    else if (['txt', 'md', 'ds_store', 'ini'].includes(e.ext) || e.name === '.DS_Store') e.why = 'not needed';
+    else e.why = 'not a file type H-Slice uses';
+    return e;
+  }
+
+  /* [{path, bytes}] -> entries. .fnfc and .zip files are opened up. */
+  async function ingest(files) {
+    const out = [];
+    for (const f of files) {
+      const ext = extOf(f.path);
+      if (ext === 'fnfc' || ext === 'zip') {
+        try {
+          for (const x of await unzip(f.bytes)) {
+            if (['fnfc', 'zip'].includes(extOf(x.name))) {
+              for (const y of await unzip(x.data)) out.push(makeEntry(x.name + '/' + y.name, y.data, base(f.path)));
+            } else out.push(makeEntry(x.name, x.data, base(f.path)));
+          }
+        } catch (err) {
+          const e = makeEntry(f.path, new Uint8Array(0)); e.kind = 'bad'; e.why = 'couldn\'t open it — ' + err.message; out.push(e);
+        }
+      } else out.push(makeEntry(f.path, f.bytes));
+    }
+    return out;
+  }
+
+  // ------------------------------------------------------------ charts
+  const legacySong = j => (j.song && typeof j.song === 'object') ? j.song : j;
+  function legacyInfo(j) {
+    const s = legacySong(j);
+    const v1 = /^psych_v1/.test(String(s.format || j.format || ''));
+    let p = 0, o = 0;
+    for (const sec of s.notes || []) {
+      const must = sec.mustHitSection !== false;
+      for (const n of sec.sectionNotes || []) {
+        const d = n[1] | 0; if (d < 0) continue;
+        (v1 ? d < 4 : (d < 4) === must) ? p++ : o++;
+      }
+    }
+    return { title: typeof s.song === 'string' ? s.song : '', bpm: s.bpm, speed: s.speed,
+             player: s.player1 || 'bf', opponent: s.player2 || 'dad', gf: s.gfVersion || s.player3 || 'gf',
+             stage: s.stage || 'stage', needsVoices: s.needsVoices !== false, v1,
+             count: { player: p, opponent: o, total: p + o } };
+  }
+  function vsNames(name, kind) {
+    const m = new RegExp('^(.+?)-' + kind + '(?:-([a-z0-9_]+))?$', 'i').exec(stemOf(name));
+    return m ? { id: low(m[1]), v: low(m[2] || '') } : null;
+  }
+  function vsVariant(key, chart, meta) {
+    const pd = meta.playData || {}, ch = pd.characters || {};
+    const notes = chart.notes || {};
+    const inChart = Object.keys(notes).filter(d => Array.isArray(notes[d]));
+    const listed = (pd.difficulties || []).filter(d => inChart.includes(d));
+    const diffs = uniq(listed.concat(sortDiffs(inChart.filter(d => !listed.includes(d)))));
+    const counts = {};
+    for (const d of diffs) { let p = 0, o = 0; for (const n of notes[d]) ((n.d | 0) < 4 ? p++ : o++); counts[d] = { player: p, opponent: o, total: p + o }; }
+    const tc = (meta.timeChanges && meta.timeChanges[0]) || {};
+    const player = ch.player || 'bf', opponent = ch.opponent || 'dad';
+    return { key, chart, meta, diffs, counts, speeds: chart.scrollSpeed || {}, bpm: tc.bpm,
+             bpmChanges: (meta.timeChanges || []).length, events: (chart.events || []).length,
+             player, opponent, gf: ch.girlfriend || 'gf', stage: pd.stage || '',
+             vocals: { player: ch.playerVocals || [player], opponent: ch.opponentVocals || [opponent] } };
+  }
+
+  function readVSlice(charts, metas, manifest, E, W) {
+    const groups = new Map();
+    const slot = (id, v) => { if (!groups.has(id)) groups.set(id, new Map()); const g = groups.get(id);
+                              if (!g.has(v)) g.set(v, {}); return g.get(v); };
+    const loose = { chart: [], meta: [] };
+    for (const e of charts) { const n = vsNames(e.name, 'chart'); if (n) { const s = slot(n.id, n.v); if (s.chart) E('Two charts both look like "' + e.name + '".'); s.chart = e; } else loose.chart.push(e); }
+    for (const e of metas)  { const n = vsNames(e.name, 'metadata'); if (n) { const s = slot(n.id, n.v); if (s.meta) E('Two metadata files both look like "' + e.name + '".'); s.meta = e; } else loose.meta.push(e); }
+    // files that aren't named <song>-chart.json: pair them if it's unambiguous
+    if (loose.chart.length || loose.meta.length) {
+      if (loose.chart.length <= 1 && loose.meta.length <= 1) {
+        const m = loose.meta[0], c = loose.chart[0];
+        const id = (manifest && low(manifest.json.songId)) || (groups.size === 1 ? [...groups.keys()][0] : '')
+                || slug(m && m.json.songName) || slug(stemOf((c || m).name)) || 'song';
+        const s = slot(id, '');
+        if (c && !s.chart) s.chart = c; if (m && !s.meta) s.meta = m;
+      } else E('Some chart files aren\'t named like <song>-chart.json / <song>-metadata.json, so they can\'t be paired. Rename them and drop them again.');
+    }
+    if (groups.size > 1) { E('These files are for more than one song (' + [...groups.keys()].join(', ') + '). Build one song at a time.'); return null; }
+    if (!groups.size) return null;
+    const [id, g] = [...groups][0];
+    const variants = [];
+    for (const [v, s] of g) {
+      const label = v ? '"' + v + '" variation' : 'song';
+      if (s.chart && !s.meta) { E('The ' + label + ' has a chart but no metadata — add ' + id + '-metadata' + (v ? '-' + v : '') + '.json.'); continue; }
+      if (s.meta && !s.chart) { W('The ' + label + ' has metadata but no chart, so it\'s left out — add ' + id + '-chart' + (v ? '-' + v : '') + '.json to include it.'); continue; }
+      const vr = vsVariant(v, s.chart.json, s.meta.json);
+      if (!vr.diffs.length) { E('The ' + label + '\'s chart has no notes in it.'); continue; }
+      vr.chartEntry = s.chart; vr.metaEntry = s.meta;
+      variants.push(vr);
+    }
+    const baseV = variants.find(v => v.key === '');
+    if (!baseV) {
+      if (variants.length) E('Only the "' + variants.map(v => v.key).join('", "') + '" variation is here. Add the base ' + id + '-chart.json and ' + id + '-metadata.json too.');
+      return null;
+    }
+    variants.sort((a, b) => (a.key === '' ? -1 : b.key === '' ? 1 : a.key.localeCompare(b.key)));
+    const meta = baseV.meta;
+    return { format: 'vslice', id, name: meta.songName || id, artist: meta.artist || '',
+             charter: meta.charter || '', stage: baseV.stage, bpm: baseV.bpm, variants };
+  }
+
+  function readLegacy(entries, E, W) {
+    const groups = new Map();
+    for (const e of entries) {
+      const st = low(stemOf(e.name));
+      const m = /^(.*)-([a-z0-9]+)$/.exec(st);
+      let id = st, diff = 'normal';
+      if (m && KNOWN_DIFFS.includes(m[2])) { id = m[1]; diff = m[2]; }
+      const info = legacyInfo(e.json);
+      if (!info.count.total) { W(e.name + ' has no notes — skipped (is it an events file?).'); continue; }
+      if (!groups.has(id)) groups.set(id, []);
+      groups.get(id).push({ e, diff, info });
+    }
+    if (groups.size > 1) { E('These charts are for more than one song (' + [...groups.keys()].join(', ') + '). Build one song at a time.'); return null; }
+    if (!groups.size) return null;
+    const [id, list] = [...groups][0];
+    const charts = {}, counts = {}, speeds = {};
+    for (const x of list) {
+      if (charts[x.diff]) { E('Two charts are both "' + x.diff + '" (' + x.e.name + '). Remove one.'); continue; }
+      charts[x.diff] = x.e.json; counts[x.diff] = x.info.count; speeds[x.diff] = x.info.speed;
+    }
+    const diffs = sortDiffs(Object.keys(charts));
+    const main = (list.find(x => x.diff === 'normal') || list[0]).info;
+    const others = list.filter(x => x.info.opponent !== main.opponent || x.info.player !== main.player);
+    if (others.length) W('Difficulties use different characters (' + uniq(list.map(x => x.info.opponent)).join(', ') + '). Each difficulty will use its own.');
+    return { format: 'legacy', id, name: main.title || id, artist: '', stage: main.stage, bpm: main.bpm, v1: list.some(x => x.info.v1),
+             variants: [{ key: '', charts, diffs, counts, speeds, bpm: main.bpm, player: main.player, opponent: main.opponent,
+                          gf: main.gf, stage: main.stage, needsVoices: main.needsVoices,
+                          chars: list.map(x => x.info) }] };
+  }
+
+  // ------------------------------------------------------------ characters
+  const normAnim = a => a.anim !== undefined ? { anim: a.anim, prefix: a.name, indices: a.indices }
+                                             : { anim: a.name, prefix: a.prefix !== undefined ? a.prefix : a.name,
+                                                 indices: a.frameIndices || a.indices };
+  const scoreSheet = (name, stem) => {
+    const n = squash(name), s = squash(stem);
+    if (!n || !s) return 0;
+    if (s === n) return 100;
+    if ([n + 'sheet', n + 'assets', n + 'spritesheet', n + 'sprites', n + 'sprite'].includes(s)) return 90;
+    if (s.startsWith(n)) return 70;
+    if (s.includes(n)) return 50;
+    if (n.includes(s) && s.length >= 3) return 40;
+    return 0;
+  };
+
+  // ------------------------------------------------------------ analyse a song mod
+  function analyzeMod(entries, ov) {
+    ov = ov || {};
+    const chosenChars = ov.chars || {}, chosenAnims = ov.anims || {};
+    const an = { errors: [], warnings: [], notes: [], skipped: [], song: null, chars: [], sheets: [],
+                 audio: [], audioChecks: [], bgCandidates: [], bg: null, icons: [], stage: null, props: [],
+                 used: new Set() };
+    const E = m => an.errors.push(m), W = m => an.warnings.push(m), N = m => an.notes.push(m);
+
+    for (const e of entries) {
+      if (e.kind === 'bad') { an.skipped.push({ e, why: e.why, bad: true }); W(e.name + ': ' + e.why + '.'); }
+      else if (e.kind === 'skip') an.skipped.push({ e, why: e.why });
+    }
+    const json = entries.filter(e => e.kind === 'json');
+    const vsC = json.filter(e => e.jk === 'vs-chart'), vsM = json.filter(e => e.jk === 'vs-meta');
+    const leg = json.filter(e => e.jk === 'legacy');
+    const charJ = json.filter(e => e.jk === 'char');
+    const stageJ = json.filter(e => e.jk === 'stage' || e.jk === 'psych-stage');
+    const manifest = json.find(e => e.jk === 'manifest');
+    for (const e of json) {
+      if (e.jk === 'events') an.skipped.push({ e, why: 'a separate events file — events are read from the chart' });
+      else if (e.jk === 'unknown') an.skipped.push({ e, why: 'a JSON file H-Slice doesn\'t recognise' });
+      else if (e.jk === 'manifest') an.skipped.push({ e, why: 'the .fnfc manifest — used to name the song' });
+    }
+
+    // ---- which songs are here. A whole mod folder holds many; build one at a time.
+    const songIdOf = e => {
+      if (e.jk === 'vs-chart') { const n = vsNames(e.name, 'chart'); return n ? n.id : null; }
+      if (e.jk === 'vs-meta') { const n = vsNames(e.name, 'metadata'); return n ? n.id : null; }
+      if (e.jk === 'legacy') { const st = low(stemOf(e.name)); const m = /^(.*)-([a-z0-9]+)$/.exec(st);
+                               return (m && KNOWN_DIFFS.includes(m[2])) ? m[1] : st; }
+      return null;
+    };
+    const legWithNotes = leg.filter(e => legacyInfo(e.json).count.total > 0);
+    const ids = uniq([...vsC, ...vsM, ...legWithNotes].map(songIdOf).filter(Boolean)).sort();
+    an.songIds = ids;
+    if (ids.length > 1) {
+      const pickId = (ov.song && ids.includes(ov.song)) ? ov.song : ids[0];
+      an.songPick = pickId;
+      const mine = e => songIdOf(e) === pickId;
+      const drop = (arr) => { const keep = arr.filter(mine); for (const e of arr) if (!keep.includes(e)) an.skipped.push({ e, why: 'a chart for another song in this folder' }); return keep; };
+      vsC.splice(0, vsC.length, ...drop(vsC)); vsM.splice(0, vsM.length, ...drop(vsM)); leg.splice(0, leg.length, ...drop(leg));
+    }
+
+    // ---- the chart
+    let song = null;
+    if ((vsC.length || vsM.length) && leg.length) E('These files mix a V-Slice chart with a Psych chart. Drop one song\'s files at a time.');
+    else if (vsC.length || vsM.length) song = readVSlice(vsC, vsM, manifest, E, W);
+    else if (leg.length) song = readLegacy(leg, E, W);
+    else E('No chart found. Add the song\'s chart .json files (or its .fnfc).');
+    if (!song) {
+      if (!an.errors.length) E(entries.some(e => e.kind === 'bad')
+        ? 'No chart could be read — a file couldn\'t be opened (see the warning below). Fix it and drop it again.'
+        : 'No chart could be read. Add the song\'s chart .json files (or its .fnfc).');
+      return an;
+    }
+    an.song = song;
+    song.srcId = song.id;                 // the id the files use, before any rename
+    for (const v of song.variants) { if (v.chartEntry) an.used.add(v.chartEntry.uid); if (v.metaEntry) an.used.add(v.metaEntry.uid); }
+    if (song.format === 'legacy') for (const e of leg) an.used.add(e.uid);
+
+    const rawId = ov.id != null ? ov.id : song.id;
+    song.id = slug(rawId);
+    if (!song.id) E('Give the mod a folder name (letters and numbers).');
+    if (ov.name != null) song.name = ov.name.trim() || song.name;
+    if (ov.artist != null) song.artist = ov.artist;
+
+    // ---- which characters the chart needs
+    const need = new Map();
+    const want = (name, role) => { if (!name) return; if (!need.has(name)) need.set(name, new Set()); need.get(name).add(role); };
+    for (const v of song.variants) {
+      want(v.player, 'player'); want(v.opponent, 'opponent'); want(v.gf, 'girlfriend');
+      for (const c of v.chars || []) { want(c.player, 'player'); want(c.opponent, 'opponent'); want(c.gf, 'girlfriend'); }
+    }
+
+    // ---- spritesheets: .xml with its .png
+    const images = entries.filter(e => e.kind === 'image');
+    const NOT_ART = /(^|\/)(icons?|ui|menus?|mainmenu|storymenu|freeplay|credits|titlescreen|title|notes?|noteskins?|notesplashes|dialogue|portraits|achievements|awards|cursor|fonts|results?|pausemenu|options)\//i;
+    const isIconName = e => /^icon[-_]/i.test(stemOf(e.name)) || /(^|\/)icons\//i.test(e.path);
+    for (const x of entries.filter(e => e.kind === 'xml')) {
+      const st = stemOf(x.name);
+      const png = images.find(p => low(stemOf(p.name)) === low(st) && p.ext === 'png') || images.find(p => low(stemOf(p.name)) === low(st));
+      const sh = { id: x.uid, stem: st, file: safe(st), xml: x, png: png || null, frames: x.sheet.frames,
+                   bom: x.sheet.bom, rotated: x.sheet.rotated, prefixes: prefixList(x.sheet.frames), isIcon: isIconName(x) };
+      an.sheets.push(sh);
+      if (png) an.used.add(png.uid);
+    }
+    const charSheets = an.sheets.filter(s => !s.isIcon && !NOT_ART.test(s.xml.path));
+    const sheetById = new Map(an.sheets.map(s => [s.id, s]));
+    const jsonFor = name => charJ.find(e => low(stemOf(e.name)) === low(name)) || null;
+
+    // default sheet for each character: json's image, then the closest name, then the last one left
+    const auto = {}, taken = new Set();
+    for (const [name] of need) {
+      const j = jsonFor(name);
+      const img = j && (j.json.image || j.json.assetPath);
+      if (!img) continue;
+      const s = charSheets.find(s => low(s.stem) === low(base(img)) && !taken.has(s.id));
+      if (s) { auto[name] = s.id; taken.add(s.id); }
+    }
+    for (const [name] of need) {
+      if (auto[name] || BUILTIN.includes(name)) continue;
+      let best = null, bs = 0;
+      for (const s of charSheets) { if (taken.has(s.id)) continue; const sc = scoreSheet(name, s.stem); if (sc > bs) { bs = sc; best = s; } }
+      if (best) { auto[name] = best.id; taken.add(best.id); }
+    }
+    const leftChars = [...need.keys()].filter(n => !auto[n] && !BUILTIN.includes(n) && !/^(bf|gf)/i.test(n));
+    const leftSheets = charSheets.filter(s => !taken.has(s.id));
+    if (leftChars.length === 1 && leftSheets.length === 1) { auto[leftChars[0]] = leftSheets[0].id; taken.add(leftSheets[0].id); }
+
+    for (const [name, roles] of need) {
+      const c = { name, roles: [...roles], jsonEntry: jsonFor(name), options: [], anims: {}, animRows: [], notes: [],
+                  choice: '', sheet: null, def: null, iconId: name, color: null };
+      c.options.push({ value: 'b:bf', label: 'Built-in Boyfriend' }, { value: 'b:gf', label: 'Built-in Girlfriend' });
+      for (const s of charSheets) c.options.push({ value: 's:' + s.id, label: 'Sheet: ' + s.stem + (s.png ? '' : ' (no .png!)') });
+      c.options.push({ value: 'none', label: 'Leave it out (coloured block)' });
+      const dflt = auto[name] ? 's:' + auto[name] : BUILTIN.includes(name) ? 'b:' + name
+                 : /^bf/i.test(name) ? 'b:bf' : /^gf/i.test(name) ? 'b:gf' : 'none';
+      const pick = chosenChars[name];
+      c.choice = (pick && c.options.some(o => o.value === pick)) ? pick : dflt;
+      c.guessed = c.choice === dflt && auto[name] && scoreSheet(name, sheetById.get(auto[name]).stem) < 70;
+
+      const j = c.jsonEntry ? c.jsonEntry.json : null;
+      if (c.jsonEntry) an.used.add(c.jsonEntry.uid);
+      if (j) {
+        const hi = j.healthIcon && typeof j.healthIcon === 'object' ? j.healthIcon.id : (j.healthicon || j.healthIcon);
+        if (hi) c.iconId = String(hi);
+        const col = j.healthbar_colors || j.healthColor || j.health_color;
+        if (Array.isArray(col)) c.color = rgbHex(col); else if (typeof col === 'string') c.color = col;
+      }
+
+      if (c.choice.startsWith('b:')) {
+        const which = c.choice.slice(2);
+        c.source = 'builtin';
+        if (which === name) c.notes.push({ t: 'ok', m: 'Built into H-Slice — nothing to include. Needs ' + (which === 'bf' ? 'BOYFRIEND' : 'GF_assets') + '.png in engineassets (set up once, in the Engine assets tab).' });
+        else { c.def = { alias: which }; c.notes.push({ t: 'ok', m: 'Uses the built-in ' + (which === 'bf' ? 'Boyfriend' : 'Girlfriend') + ' as a stand-in.' }); }
+      } else if (c.choice === 'none') {
+        c.source = 'none';
+        c.notes.push({ t: 'warn', m: 'No sheet — ' + name + ' will show as a coloured block. Add ' + name + '\'s .png and .xml to fix that.' });
+        W(name + ' has no spritesheet and will show as a coloured block.');
+      } else {
+        const sh = sheetById.get(c.choice.slice(2));
+        c.sheet = sh; c.source = j ? 'json' : 'sheet';
+        if (!sh.png) { c.notes.push({ t: 'warn', m: sh.stem + '.xml has no matching .png — add ' + sh.stem + '.png.' }); W(sh.stem + '.xml has no matching ' + sh.stem + '.png, so ' + name + ' can\'t be drawn.'); }
+        if (sh.rotated) c.notes.push({ t: 'warn', m: 'This sheet has rotated frames, which H-Slice draws unrotated.' });
+        if (c.guessed) c.notes.push({ t: 'dim', m: 'Matched by elimination — check the preview is really ' + name + '.' });
+        if (j) {
+          const rt = low(j.renderType || 'sparrow');
+          if (rt !== 'sparrow') { c.notes.push({ t: 'warn', m: 'This character uses "' + j.renderType + '", but H-Slice reads Sparrow sheets only.' }); W(name + '\'s JSON uses ' + j.renderType + ' rendering, which H-Slice doesn\'t support.'); }
+          const list = (j.animations || []).map(normAnim);
+          let bad = 0;
+          for (const a of list) {
+            const n = framesFor(sh.frames, a.prefix || '', a.indices).length;
+            c.animRows.push({ anim: a.anim, prefix: a.prefix, frames: n });
+            if (!n) bad++;
+          }
+          if (bad) {
+            const one = bad === 1;
+            c.notes.push({ t: 'warn', m: (one ? '1 animation' : bad + ' animations') + ' in the JSON ' + (one ? 'doesn\'t' : 'don\'t') + ' match anything in the sheet — ' + (one ? 'it won\'t' : 'they won\'t') + ' play.' });
+            W(name + ': ' + (one ? '1 animation' : bad + ' animations') + ' from the JSON ' + (one ? 'isn\'t' : 'aren\'t') + ' in the sheet.');
+          }
+          const def = JSON.parse(JSON.stringify(j));
+          c.def = def;                       // image is set at build time, once the folder is known
+        } else {
+          const guess = autoAnims(sh.prefixes);
+          const mine = chosenAnims[name] || {};
+          const slots = ['idle', ...SING];
+          if (guess.danceLeft || guess.danceRight || mine.danceLeft || mine.danceRight) slots.splice(1, 0, 'danceLeft', 'danceRight');
+          for (const d of SING) if (guess[d + 'miss'] || mine[d + 'miss']) slots.push(d + 'miss');
+          if (!guess.idle && !guess.danceLeft && sh.prefixes.length) {
+            const longest = sh.prefixes.slice().sort((a, b) => b.count - a.count)[0];
+            guess.idle = longest.prefix;
+            if (sh.prefixes.length === 1) {
+              c.notes.push({ t: 'warn', m: 'This sheet has only one animation ("' + longest.prefix + '", ' + longest.count + ' frames). It looks like a cutscene, not a character — it\'ll loop as the idle.' });
+              W(name + '\'s sheet has only one animation — it looks like a cutscene, not a character sheet.');
+            } else c.notes.push({ t: 'warn', m: 'No idle animation found — using "' + longest.prefix + '". Pick the right one below.' });
+          }
+          for (const s of slots) {
+            const pre = mine[s] !== undefined ? mine[s] : (guess[s] || '');
+            c.anims[s] = pre;
+            c.animRows.push({ anim: s, prefix: pre, frames: pre ? framesFor(sh.frames, pre).length : 0, editable: true });
+          }
+          const missing = SING.filter(d => !c.anims[d]);
+          if (missing.length === 4) { c.notes.push({ t: 'warn', m: 'No sing animations — ' + name + ' will keep idling through the notes.' }); W(name + ' has no sing animations.'); }
+          else if (missing.length) c.notes.push({ t: 'warn', m: 'Missing ' + missing.map(m => m.replace('sing', '').toLowerCase()).join(', ') + ' — those notes keep the previous pose.' });
+          const anims = [];
+          for (const s of slots) if (c.anims[s]) anims.push({ anim: s, name: c.anims[s], fps: 24, loop: false, offsets: [0, 0] });
+          c.def = { scale: 1, flip_x: false, healthicon: c.iconId, animations: anims };
+        }
+      }
+      an.chars.push(c);
+    }
+    const unusedSheets = an.sheets.filter(s => !s.isIcon && !NOT_ART.test(s.xml.path) && !an.chars.some(c => c.sheet === s));
+    if (unusedSheets.length > 3) N(unusedSheets.length + ' other spritesheets aren\'t used by this song\'s characters, so they\'re left out.');
+    else for (const s of unusedSheets) N(s.stem + ' isn\'t used by any character in the chart, so it\'s left out.');
+
+    // ---- audio: renamed to exactly what the engine asks for
+    const vocalNames = uniq(song.variants.flatMap(v => v.vocals ? v.vocals.player.concat(v.vocals.opponent) : [v.player, v.opponent]));
+    const varKeys = song.variants.map(v => v.key).filter(Boolean);
+    const canonVoice = rest => {
+      for (const n of vocalNames) {
+        if (low(rest) === low(n)) return n;
+        for (const vk of varKeys) if (low(rest) === low(n + '-' + vk)) return n + '-' + vk;
+      }
+      return rest;
+    };
+    // A mod folder holds an Inst.ogg for every song, so take the ones in this
+    // song's own folder (songs/<id>/...) — otherwise the first Inst.ogg found
+    // could be another song's music.
+    let auds = entries.filter(e => e.kind === 'audio');
+    const inFolder = (e, id) => low(e.path).split('/').slice(0, -1).includes(low(id))
+                              || (e.from && low(stemOf(e.from)) === low(id));
+    const ownAud = auds.filter(e => inFolder(e, song.srcId));
+    if (ownAud.length) {
+      const other = auds.length - ownAud.length;
+      if (other) { N(other + ' audio file' + (other === 1 ? '' : 's') + ' from other songs left out.'); for (const e of auds) if (!ownAud.includes(e)) an.skipped.push({ e, why: 'audio for another song' }); }
+      auds = ownAud;
+    }
+    auds = auds.sort((a, b) => (a.ext === 'ogg' ? -1 : 0) - (b.ext === 'ogg' ? -1 : 0));
+    const outNames = new Set();
+    for (const a of auds) {
+      const st = stemOf(a.name);
+      let out = null, m;
+      if ((m = /^inst(?:[-_](.+))?$/i.exec(st))) out = 'Inst' + (m[1] ? '-' + low(m[1]) : '');
+      else if ((m = /^voices[-_]player(?:[-_](.+))?$/i.exec(st))) out = 'Voices-Player' + (m[1] ? '-' + low(m[1]) : '');
+      else if ((m = /^voices[-_]opponent(?:[-_](.+))?$/i.exec(st))) out = 'Voices-Opponent' + (m[1] ? '-' + low(m[1]) : '');
+      else if ((m = /^voices[-_](.+)$/i.exec(st))) out = 'Voices-' + canonVoice(m[1]);
+      else if (/^voices$/i.test(st)) out = 'Voices';
+      else { an.skipped.push({ e: a, why: 'audio that isn\'t Inst or Voices' }); continue; }
+      if (!SONG_AUD.includes(a.ext)) { W(a.name + ' is .' + a.ext + ' — songs need .ogg, .mp3 or .wav. Convert it (Audacity does this for free).'); an.skipped.push({ e: a, why: 'wrong audio format' }); continue; }
+      if (outNames.has(low(out))) { N(a.name + ' duplicates another ' + out + ' file, so it\'s left out.'); an.skipped.push({ e: a, why: 'duplicate of ' + out }); continue; }
+      outNames.add(low(out));
+      an.audio.push({ e: a, out: out + '.' + a.ext });
+      an.used.add(a.uid);
+    }
+    const has = n => outNames.has(low(n));
+    for (const v of song.variants) {
+      const sfx = v.key ? '-' + v.key : '', lab = v.key ? ' (' + v.key + ')' : '';
+      const inst = has('Inst' + sfx) || (v.key && has('Inst'));
+      an.audioChecks.push({ ok: inst, label: 'Instrumental' + lab, file: 'Inst' + sfx });
+      if (!inst) W('No instrumental' + lab + ' — add Inst' + sfx + '.ogg, or the song plays silently.');
+      const shared = has('Voices' + sfx) || has('Voices') || has('Voices-Player' + sfx) || has('Voices-Player');
+      if (v.vocals) {
+        for (const n of uniq(v.vocals.player.concat(v.vocals.opponent))) {
+          const ok = has('Voices-' + n + sfx) || has('Voices-' + n) || shared;
+          an.audioChecks.push({ ok, label: n + '\'s vocals' + lab, file: 'Voices-' + n + sfx, soft: true });
+        }
+        if (an.audioChecks.some(c => c.soft && !c.ok && c.label.endsWith(lab))) W('Some vocals' + lab + ' are missing — those parts will be silent.');
+      } else if (v.needsVoices) {
+        const ok = shared;
+        an.audioChecks.push({ ok, label: 'Vocals', file: 'Voices.ogg', soft: true });
+        if (!ok) W('No vocals — add Voices.ogg (or Voices-Player.ogg + Voices-Opponent.ogg).');
+      }
+    }
+
+    // ---- icons
+    const wantIcons = new Set(an.chars.map(c => low(c.iconId)));
+    let otherIcons = 0;
+    for (const img of images) {
+      if (!isIconName(img) || an.used.has(img.uid)) continue;
+      const id = stemOf(img.name).replace(/^icon[-_]/i, '');
+      if (!wantIcons.has(low(id))) { otherIcons++; an.used.add(img.uid); an.skipped.push({ e: img, why: 'an icon for a character this song doesn\'t use' }); continue; }
+      if (img.ext !== 'png') { W(img.name + ': icons must be .png.'); continue; }
+      if (an.sheets.some(s => s.isIcon && low(s.stem) === low(stemOf(img.name)))) N(img.name + ' is an animated icon sheet — H-Slice draws the whole image, so use a plain 300×150 or 150×150 icon instead.');
+      an.icons.push({ e: img, id, out: 'icon-' + id + '.png' });
+      an.used.add(img.uid);
+    }
+    if (otherIcons) N(otherIcons + ' icon' + (otherIcons === 1 ? '' : 's') + ' for other characters left out.');
+    for (const c of an.chars) if (c.source !== 'builtin' && c.source !== 'none' && !an.icons.some(i => low(i.id) === low(c.iconId)))
+      N('No icon for ' + c.name + ' — the health bar will show none. Add icon-' + c.iconId + '.png if you have it.');
+
+    // ---- stage json
+    const sj = stageJ.find(e => low(stemOf(e.name)) === low(song.stage)) || (stageJ.length === 1 ? stageJ[0] : null);
+    for (const e of stageJ) if (e !== sj) an.skipped.push({ e, why: 'a stage for another song' });
+    if (!sj && stageJ.length > 1) N(stageJ.length + ' stage files here, but none named ' + song.stage + '.json — no stage layout used.');
+    if (sj) {
+      an.used.add(sj.uid);
+      if (sj.jk === 'psych-stage') {
+        const j = sj.json;
+        an.stage = { kind: 'psych', name: song.stage || song.id, def: {
+          zoom: typeof j.defaultZoom === 'number' ? j.defaultZoom : undefined,
+          bf: j.boyfriend, dad: j.opponent, gf: j.girlfriend } };
+        N('Psych stage files only hold positions — the stage\'s pictures come from its Lua script, which H-Slice can\'t run. Add a bg image, or arrange one with E in the game.');
+      } else {
+        const j = JSON.parse(JSON.stringify(sj.json));
+        an.stage = { kind: 'vslice', name: song.stage || song.id, def: j };
+        for (const p of j.props || []) {
+          if (!p.assetPath) continue;
+          const want = low(base(p.assetPath));
+          const img = images.find(i => !an.used.has(i.uid) && low(stemOf(i.name)) === want);
+          const animated = Array.isArray(p.animations) && p.animations.length;
+          if (!img) { W('The stage needs "' + p.assetPath + '" but that image isn\'t here.'); continue; }
+          if (animated) N('Stage prop "' + (p.name || p.assetPath) + '" is animated — H-Slice shows it as a still image.');
+          an.props.push({ e: img, out: p.assetPath.replace(/^\/+/, '') + '.' + (img.ext === 'jpeg' ? 'jpg' : img.ext) });
+          an.used.add(img.uid);
+        }
+      }
+    }
+
+    // ---- background
+    const bgOk = e => ['png', 'jpg', 'jpeg', 'webp'].includes(e.ext);
+    an.bgCandidates = images.filter(e => !an.used.has(e.uid) && bgOk(e) && !NOT_ART.test(e.path) && !isIconName(e));
+    for (const e of images) if (!an.used.has(e.uid) && bgOk(e) && (NOT_ART.test(e.path) || isIconName(e))) an.skipped.push({ e, why: 'menu / interface art' });
+    for (const e of images) if (!an.used.has(e.uid) && !bgOk(e)) an.skipped.push({ e, why: '.' + e.ext + ' can\'t be a background — use png, jpg or webp' });
+    const stg = low(song.stage);
+    const rank = e => { const s = low(stemOf(e.name)), p = low(e.path);
+      if (/^(bg|background)$/.test(s)) return 0;
+      if (stg && (p.split('/').slice(0, -1).includes(stg) || s.includes(stg))) return /(bg|back|sky|wall|stage)/.test(s) ? 0 : 1;
+      return /(^|[^a-z])(bg|background|stageback|back|stage|sky|wall)([^a-z]|$)/.test(s) ? 1 : 2; };
+    const sorted = an.bgCandidates.slice().sort((a, b) => rank(a) - rank(b) || b.size - a.size);
+    const stageHasLayers = an.stage && an.stage.kind === 'vslice' && an.props.length;
+    // in a big folder, only pick automatically when something looks like this song's background
+    const sure = sorted[0] && (rank(sorted[0]) < 2 || an.bgCandidates.length <= 3);
+    let bgPick = ov.bg !== undefined ? ov.bg : (stageHasLayers || !sure ? 'none' : sorted[0].uid);
+    if (bgPick !== 'none' && !an.bgCandidates.some(e => e.uid === bgPick)) bgPick = sorted[0] ? sorted[0].uid : 'none';
+    an.bgChoice = bgPick;
+    an.bg = bgPick === 'none' ? null : an.bgCandidates.find(e => e.uid === bgPick);
+    if (an.bg) an.used.add(an.bg.uid);
+    const spare = an.bgCandidates.filter(e => e !== an.bg);
+    if (spare.length > 3) N(spare.length + ' other images aren\'t used — pick one under Background if it should be the backdrop.');
+    else for (const e of spare) N(e.name + ' isn\'t used (pick it as the background if it should be).');
+    if (!an.bg && !stageHasLayers) N('No background — the song plays on a plain backdrop. Add a bg image any time.');
+
+    // ---- set expectations: special notes and events H-Slice doesn't act on
+    const EVENTS_OK = ['FocusCamera', 'ZoomCamera', 'SetCameraBop', 'PlayAnimation'];
+    let kinds = 0; const kindNames = new Set(), skipEv = new Map();
+    for (const v of song.variants) {
+      if (v.chart) {
+        for (const d of v.diffs) for (const n of v.chart.notes[d] || []) if (n.k) { kinds++; kindNames.add(n.k); }
+        for (const ev of v.chart.events || []) if (!EVENTS_OK.includes(ev.e)) skipEv.set(ev.e, (skipEv.get(ev.e) || 0) + 1);
+      }
+      for (const c of Object.values(v.charts || {})) {
+        const sj = legacySong(c);
+        for (const sec of sj.notes || []) for (const n of sec.sectionNotes || []) {
+          if ((n[1] | 0) < 0) { const nm = Array.isArray(n[2]) ? 'Psych events' : String(n[2] || 'event'); skipEv.set(nm, (skipEv.get(nm) || 0) + 1); }
+          else if (typeof n[3] === 'string' && n[3]) { kinds++; kindNames.add(n[3]); }
+        }
+        for (const ev of sj.events || []) for (const e of (Array.isArray(ev[1]) ? ev[1] : [])) {
+          const nm = Array.isArray(e) ? String(e[0]) : 'event'; skipEv.set(nm, (skipEv.get(nm) || 0) + 1);
+        }
+      }
+    }
+    if (kinds) N(kinds + ' special note' + (kinds === 1 ? '' : 's') + ' (' + [...kindNames].slice(0, 4).join(', ') + (kindNames.size > 4 ? '…' : '') +
+                 ') will play as ordinary notes — H-Slice doesn\'t do custom note types yet.');
+    if (skipEv.size) {
+      const total = [...skipEv.values()].reduce((a, b) => a + b, 0);
+      N(total + ' event' + (total === 1 ? '' : 's') + ' won\'t do anything (' + [...skipEv.keys()].slice(0, 4).join(', ') + (skipEv.size > 4 ? '…' : '') +
+        '). H-Slice runs camera focus, zoom, bop and play-animation events.');
+    }
+
+    // ---- the rest of the song's details
+    const opp = an.chars.find(c => c.roles.includes('opponent'));
+    song.icon = opp ? opp.iconId : 'dad';
+    song.color = ov.color || (opp && opp.color) || colorFor(song.name);
+    if (song.format === 'legacy' && song.v1) N('Psych 1.0 chart format detected — its note sides are handled correctly.');
+    return an;
+  }
+
+  // ------------------------------------------------------------ build a song mod
+  function buildMod(an, stamp) {
+    if (!an.song) throw new Error('nothing to build');
+    if (an.errors.length) throw new Error(an.errors[0]);
+    const song = an.song, id = song.id, dir = id + '/';
+    const files = [];
+    const add = (path, data) => files.push({ path: dir + path, data: typeof data === 'string' ? te.encode(data) : data });
+    const L = [];
+    L.push('/* ' + song.name + (song.artist ? ' — ' + song.artist : '') + '');
+    L.push('   An H-Slice mod, built ' + (stamp || new Date().toISOString().slice(0, 10)) + ' with the H-Slice mod builder.');
+    L.push('   This file holds the chart, the metadata, the characters and their spritesheet');
+    L.push('   frames. The .png and audio files sit beside it in mods/' + id + '/.');
+    L.push('   To install: add  HSLICE.load(\'mods/' + id + '/mod.js\');  to engineassets/mods.js */');
+    L.push('(() => {');
+
+    // sheets — named per mod, so two mods' "bingo_sheet" never collide
+    const sheets = new Map();
+    for (const c of an.chars) if (c.sheet && c.sheet.png) sheets.set(c.sheet.id, c.sheet);
+    const keyOf = sh => 'mods/' + id + '/' + sh.file;
+    if (sheets.size) L.push('  // spritesheet frames (already parsed — the .png files sit beside this one)');
+    for (const sh of sheets.values()) {
+      L.push('  HSLICE.sheet(' + js(keyOf(sh)) + ', ' + js(compactFrames(sh.frames)) + ');');
+      add(sh.file + '.png', sh.png.bytes);
+    }
+    const defs = an.chars.filter(c => c.def && !(c.sheet && !c.sheet.png));
+    if (defs.length) L.push('', '  // characters');
+    for (const c of defs) {
+      const def = JSON.parse(JSON.stringify(c.def));
+      if (c.sheet) def.image = keyOf(c.sheet);
+      L.push('  HSLICE.character(' + js(c.name) + ', ' + js(def) + ');');
+    }
+
+    // charts — one V-Slice chart holds every difficulty, so each is written once
+    L.push('');
+    const vars = song.variants;
+    const nm = v => v.key ? 'v_' + v.key.replace(/[^a-z0-9_]/g, '_') : 'base';
+    const meta = v => { const m = JSON.parse(JSON.stringify(v.meta)); if (!v.key) { m.songName = song.name; if (song.artist) m.artist = song.artist; } return m; };
+    if (song.format === 'vslice') {
+      for (const v of vars) {
+        L.push('  // ' + (v.key ? 'the "' + v.key + '" variation' : 'the song'));
+        L.push('  const ' + nm(v) + ' = {');
+        L.push('    metadata: ' + js(meta(v)) + ',');
+        L.push('    chart: ' + js(v.chart) + ',');
+        L.push('  };');
+      }
+    } else {
+      L.push('  // one chart per difficulty');
+      L.push('  const charts = ' + js(vars[0].charts) + ';');
+    }
+    const b = vars[0];
+    L.push('');
+    L.push('  HSLICE.song({');
+    L.push('    id: ' + js(id) + ', folder: ' + js(id) + ', audio: "mods/",');
+    L.push('    name: ' + js(song.name) + ', artist: ' + js(song.artist || '') + ',');
+    L.push('    icon: ' + js(song.icon) + ', color: ' + js(song.color) + ', stage: ' + js(song.stage || '') + ',');
+    L.push('    difficulties: ' + js(b.diffs) + ',');
+    if (song.format === 'vslice') {
+      L.push('    metadata: base.metadata,');
+      L.push('    charts: { ' + b.diffs.map(d => js(d) + ': base.chart').join(', ') + ' },');
+      const others = vars.filter(v => v.key);
+      if (others.length) {
+        L.push('    variations: {');
+        for (const v of others)
+          L.push('      ' + js(v.key) + ': { metadata: ' + nm(v) + '.metadata, difficulties: ' + js(v.diffs) +
+                 ', charts: { ' + v.diffs.map(d => js(d) + ': ' + nm(v) + '.chart').join(', ') + ' } },');
+        L.push('    },');
+      }
+    } else L.push('    charts,');
+    L.push('  });');
+    L.push('})();');
+    const modJs = L.join('\n') + '\n';
+    add('mod.js', modJs);
+
+    // audio, icons, background, stage
+    for (const a of an.audio) add(a.out, a.e.bytes);
+    for (const i of an.icons) add(i.out, i.e.bytes);
+    for (const p of an.props) add(p.out, p.e.bytes);
+    if (an.bg) add('bg.' + (an.bg.ext === 'jpeg' ? 'jpg' : an.bg.ext), an.bg.bytes);
+    if (an.stage) {
+      const def = Object.fromEntries(Object.entries(an.stage.def).filter(([, v]) => v !== undefined));
+      add('stage.js', '/* Stage for ' + song.name + '. Press E in the game to move things around,\n' +
+                      '   then S to save a replacement for this file. */\n' +
+                      'HSLICE.stage(' + js(an.stage.name) + ', ' + JSON.stringify(def, null, 2) + ');\n');
+    }
+    const line = 'HSLICE.load(\'mods/' + id + '/mod.js\');';
+    const listing = files.map(f => '  ' + f.path.slice(dir.length)).join('\n');
+    add('README.txt',
+      song.name + ' — an H-Slice mod\r\n\r\n' +
+      'INSTALL\r\n' +
+      '  1. Put this "' + id + '" folder inside  h-slice/mods/\r\n' +
+      '  2. Open  h-slice/engineassets/mods.js  and add this line:\r\n' +
+      '       ' + line + '\r\n' +
+      '  3. Open index.html. ' + song.name + ' is in Freeplay.\r\n\r\n' +
+      'FILES\r\n' + listing.replace(/\n/g, '\r\n') + '\r\n\r\n' +
+      'Built with the H-Slice mod builder.\r\n');
+    const zipItems = [{ path: dir, dir: true }, ...files];
+    const blob = writeZip(zipItems);
+    return { id, name: id + '.zip', blob, files, modJs, line, size: blob.size };
+  }
+
+  // ------------------------------------------------------------ engine assets
+  const UI_SHEET = /^(NOTE_assets|noteSplashes|ratings?|nums?|numbers|combo|healthBar|countdown)$/i;
+  const NOTE_NEEDS = ['purple0', 'blue0', 'green0', 'red0', 'arrowLEFT', 'arrowDOWN', 'arrowUP', 'arrowRIGHT',
+    'left press', 'down press', 'up press', 'right press', 'left confirm', 'down confirm', 'up confirm', 'right confirm',
+    'purple hold piece', 'blue hold piece', 'green hold piece', 'red hold piece', 'blue hold end', 'green hold end', 'red hold end'];
+  function analyzeEngine(entries) {
+    const r = { rows: [], sheets: [], warnings: [], notes: [], errors: [], skipped: [] };
+    for (const e of entries) if (e.kind === 'bad') { r.skipped.push({ e, why: e.why, bad: true }); r.warnings.push(e.name + ': ' + e.why + '.'); } else if (e.kind === 'skip' || e.kind === 'json') r.skipped.push({ e, why: e.kind === 'json' ? 'JSON isn\'t an engine asset (song mods go in the other tab)' : e.why });
+    const imgs = entries.filter(e => e.kind === 'image');
+    const used = new Set();
+    for (const x of entries.filter(e => e.kind === 'xml')) {
+      const st = stemOf(x.name);
+      const png = imgs.find(p => low(stemOf(p.name)) === low(st) && p.ext === 'png');
+      let folder;
+      if (UI_SHEET.test(st)) folder = 'ui';
+      else if (/^(BOYFRIEND|GF_assets)$/i.test(st) || /(^|\/)characters\//i.test(x.path)) folder = 'characters';
+      else if (/^(logo|logoBumpin|titleLogo|fnfLogo|gfDanceTitle|titleEnter)$/i.test(st)) {
+        r.notes.push(st + '.xml is an animated title sheet — H-Slice\'s title logo is a single still image, so only use a plain logo.png.');
+        if (png) used.add(png.uid);
+        continue;
+      } else folder = 'characters';
+      if (low(st) === 'notes') { r.warnings.push('notes.xml is V-Slice\'s note skin. H-Slice uses the base game / Psych NOTE_assets.xml — use that one instead.'); if (png) used.add(png.uid); continue; }
+      const key = folder + '/' + st;
+      const sh = { key, xml: x, png, frames: x.sheet.frames, bom: x.sheet.bom };
+      r.sheets.push(sh);
+      if (png) { used.add(png.uid); r.rows.push({ e: png, dst: 'engineassets/images/' + key + '.png', what: 'sheet' }); }
+      else r.warnings.push(st + '.xml has no ' + st + '.png beside it — add the .png.');
+      r.rows.push({ e: x, dst: 'engineassets/sprites.js', what: 'frames → ' + key });
+      if (/^NOTE_assets$/i.test(st)) {
+        const pres = prefixList(x.sheet.frames).map(p => low(p.prefix));
+        const missing = NOTE_NEEDS.filter(n => !x.sheet.frames.some(f => low(f.name).startsWith(low(n))));
+        const tail = x.sheet.frames.some(f => /^(purple hold end|pruple end hold)/i.test(f.name));
+        if (!tail) missing.push('purple hold end (or pruple end hold)');
+        if (missing.length) r.warnings.push('NOTE_assets is missing ' + missing.length + ' of the animations H-Slice uses (' + missing.slice(0, 4).join(', ') + (missing.length > 4 ? '…' : '') + '). Arrows may fall back to plain shapes.');
+        else r.notes.push('NOTE_assets has every arrow, press, confirm and hold animation. ✓');
+        void pres;
+      }
+    }
+    for (const i of imgs) {
+      if (used.has(i.uid)) continue;
+      const st = stemOf(i.name), s = low(st);
+      let dst = null;
+      if (i.ext !== 'png' && !/^(logo|titlelogo|fnflogo|logobumpin|titlebg)$/.test(s)) { r.skipped.push({ e: i, why: 'engine images must be .png' }); continue; }
+      if (/^icon[-_]/i.test(st)) dst = 'images/ui/icons/' + st + '.png';
+      else if (/^(sick|good|bad|shit)$/i.test(st)) dst = 'images/ui/' + s + '.png';
+      else if (/^num\d$/i.test(st)) dst = 'images/ui/' + s + '.png';
+      else if (/^(BOYFRIEND|GF_assets)$/i.test(st)) dst = 'images/characters/' + (s === 'boyfriend' ? 'BOYFRIEND' : 'GF_assets') + '.png';
+      else if (/^(logo|titlelogo|fnflogo|logobumpin)$/.test(s)) dst = 'images/logo.' + i.ext;
+      else if (s === 'titlebg') dst = 'images/ui/titleBG.png';
+      else if (s === 'healthbar') dst = 'images/ui/healthBar.png';
+      else if (/^(gameover|game[-_]over|bfdead|bf[-_]dead|blueballed|blue[-_]balled)$/.test(s)) dst = 'images/gameover.png';
+      else { r.skipped.push({ e: i, why: 'not an image the engine uses' }); continue; }
+      r.rows.push({ e: i, dst: 'engineassets/' + dst, what: 'image' });
+    }
+    for (const a of entries.filter(e => e.kind === 'audio')) {
+      const s = low(stemOf(a.name));
+      let dst = null;
+      if (/^(freakymenu|menu|freakymenuerect)$/.test(s)) dst = 'songs/' + a.name;
+      else if (/^(gameover|game[-_]over|gameovermusic)$/.test(s)) dst = 'songs/gameOver.' + a.ext;
+      else if (/^(scrollmenu|confirmmenu|cancelmenu)$/.test(s)) dst = 'sounds/' + stemOf(a.name).replace(/^./, c => c.toLowerCase()).replace(/menu$/i, 'Menu') + '.' + a.ext;
+      else { r.skipped.push({ e: a, why: 'not a menu song or menu sound' }); continue; }
+      r.rows.push({ e: a, dst: 'engineassets/' + dst, what: 'audio' });
+    }
+    const hasRow = re => r.rows.some(x => re.test(x.dst));
+    if (!r.rows.length && !r.sheets.length) r.errors.push('Nothing here is an engine asset. For a song, use the Song mod tab.');
+    if (hasRow(/\/(sick|good|bad|shit)\.png$/) && !['sick', 'good', 'bad', 'shit'].every(n => hasRow(new RegExp('/' + n + '\\.png$'))))
+      r.notes.push('Only some rating images are here — the rest will show as text.');
+    return r;
+  }
+  function buildEngine(r) {
+    if (r.errors.length) throw new Error(r.errors[0]);
+    const files = [];
+    const seen = new Set();
+    for (const row of r.rows) {
+      if (row.dst === 'engineassets/sprites.js' || seen.has(low(row.dst))) continue;
+      seen.add(low(row.dst));
+      files.push({ path: row.dst, data: row.e.bytes });
+    }
+    if (r.sheets.length) {
+      const L = ['/* H-Slice engine spritesheets, built with the mod builder.',
+                 '   Frames are already parsed, so this works from a double-click.',
+                 '   The .png files live in engineassets/images/. */'];
+      for (const sh of r.sheets) L.push('HSLICE.sheet(' + js(sh.key) + ', ' + js(compactFrames(sh.frames)) + ');');
+      files.push({ path: 'engineassets/sprites.js', data: te.encode(L.join('\n') + '\n') });
+    }
+    const blob = writeZip([{ path: 'engineassets/', dir: true }, ...files]);
+    return { name: 'engineassets.zip', blob, files, size: blob.size };
+  }
+
+  return { ingest, makeEntry, analyzeMod, buildMod, analyzeEngine, buildEngine, writeZip, unzip, crc32,
+           parseSparrow, prefixList, autoAnims, framesFor, compactFrames, jsonKind, legacyInfo,
+           fmtSize, slug, stemOf, base, SING };
+})();
+if (typeof globalThis !== 'undefined') globalThis.HSliceBuilder = Core;
+
+/* ============================================================================ UI */
+const UI = (() => {
+  const $ = (s, r = document) => r.querySelector(s);
+  const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+  const S = {
+    mod: { entries: [], an: null, ov: { chars: {}, anims: {} }, built: null, url: null, busy: false },
+    engine: { entries: [], an: null, built: null, url: null, busy: false },
+    pickFor: 'mod', bitmaps: new Map(), thumbs: new Map(),
+  };
+
+  // ---------------------------------------------------------------- input
+  async function readFileList(list) {
+    const out = [];
+    for (const f of list) out.push({ path: f.webkitRelativePath || f.relPath || f.name, bytes: new Uint8Array(await f.arrayBuffer()) });
+    return out;
+  }
+  async function walkEntry(entry, prefix, out) {
+    if (entry.isFile) {
+      const f = await new Promise((res, rej) => entry.file(res, rej));
+      f.relPath = prefix + f.name; out.push(f);
+    } else if (entry.isDirectory) {
+      const rd = entry.createReader();
+      let batch;
+      do {
+        batch = await new Promise((res, rej) => rd.readEntries(res, rej));
+        for (const e of batch) await walkEntry(e, prefix + entry.name + '/', out);
+      } while (batch.length);
+    }
+  }
+  async function fromDrop(dt) {
+    const items = [...(dt.items || [])].map(i => i.webkitGetAsEntry && i.webkitGetAsEntry()).filter(Boolean);
+    if (items.length) { const out = []; for (const it of items) await walkEntry(it, '', out); return out; }
+    return [...dt.files];
+  }
+  async function add(scope, files) {
+    const st = S[scope];
+    if (!files.length) return;
+    setBusy(scope, 'Reading ' + files.length + ' file' + (files.length === 1 ? '' : 's') + '…');
+    try {
+      const raw = await readFileList(files);
+      const got = await Core.ingest(raw);
+      // a file dropped twice replaces the old copy
+      const key = e => e.path.toLowerCase();
+      const fresh = new Set(got.map(key));
+      st.entries = st.entries.filter(e => !fresh.has(key(e))).concat(got);
+      st.built = null;
+      analyze(scope);
+    } catch (err) {
+      toast('Couldn\'t read those files: ' + err.message);
+    } finally { setBusy(scope, null); }
+  }
+  function analyze(scope) {
+    const st = S[scope];
+    st.an = st.entries.length ? (scope === 'mod' ? Core.analyzeMod(st.entries, st.ov) : Core.analyzeEngine(st.entries)) : null;
+    render(scope);
+  }
+  function setBusy(scope, msg) {
+    const drop = $('#drop-' + scope);
+    let b = drop.querySelector('.busy');
+    if (msg) { if (!b) { b = document.createElement('div'); b.className = 'busy'; drop.appendChild(b); } b.textContent = msg; }
+    else if (b) b.remove();
+  }
+
+  // ---------------------------------------------------------------- render
+  function render(scope) {
+    const st = S[scope], an = st.an, has = st.entries.length > 0;
+    $('#drop-' + scope).classList.toggle('compact', has);
+    $('#work-' + scope).hidden = !has;
+    $('#bar-' + scope).hidden = !has;
+    if (!has) { $('#result-' + scope).hidden = true; return; }
+    $('#files-' + scope).innerHTML = filesHTML(scope);
+    $('#review-' + scope).innerHTML = scope === 'mod' ? reviewMod(an) : reviewEngine(an);
+    renderBar(scope);
+    renderResult(scope);
+    if (scope === 'mod') paintPreviews();
+  }
+
+  const KIND = e => e.kind === 'json' ? ({ 'vs-chart': 'chart', 'vs-meta': 'metadata', legacy: 'chart', char: 'character',
+    stage: 'stage', 'psych-stage': 'stage', manifest: 'manifest', events: 'events' }[e.jk] || 'json')
+    : e.kind === 'xml' ? 'sheet' : e.kind === 'image' ? 'image' : e.kind === 'audio' ? 'audio' : e.kind === 'bad' ? 'error' : 'skipped';
+  const GROUPS = [['chart', 'Charts'], ['metadata', 'Charts'], ['manifest', 'Charts'], ['character', 'Characters'],
+                  ['sheet', 'Spritesheets'], ['image', 'Images'], ['audio', 'Audio'], ['stage', 'Stage'],
+                  ['events', 'Not used'], ['json', 'Not used'], ['skipped', 'Not used'], ['error', 'Problems']];
+  function filesHTML(scope) {
+    const st = S[scope], an = st.an;
+    const skipWhy = new Map(((an && an.skipped) || []).map(s => [s.e.uid, s]));
+    const by = new Map();
+    for (const e of st.entries) {
+      let g = (GROUPS.find(x => x[0] === KIND(e)) || [0, 'Other'])[1];
+      if (skipWhy.has(e.uid) && g !== 'Problems') g = skipWhy.get(e.uid).bad ? 'Problems' : 'Not used';
+      if (!by.has(g)) by.set(g, []);
+      by.get(g).push(e);
+    }
+    const order = ['Charts', 'Characters', 'Spritesheets', 'Images', 'Audio', 'Stage', 'Other', 'Not used', 'Problems'];
+    const total = st.entries.reduce((n, e) => n + e.size, 0);
+    let h = '<h3>Files <span class="count">' + st.entries.length + ' · ' + Core.fmtSize(total) + '</span></h3>';
+    for (const g of order) {
+      const list = by.get(g); if (!list) continue;
+      h += '<div class="fgroup"><div class="fgroup-h">' + g + '</div>';
+      for (const e of list.sort((a, b) => a.name.localeCompare(b.name))) {
+        const why = skipWhy.get(e.uid);
+        h += '<div class="frow" title="' + esc(e.path + (why ? ' — ' + why.why : '') + (e.from ? ' (from ' + e.from + ')' : '')) + '">' +
+             '<span class="fname">' + esc(e.name) + '</span>' +
+             '<span class="fsize">' + (e.size ? Core.fmtSize(e.size) : '') + '</span>' +
+             '<button class="x" data-act="remove" data-scope="' + scope + '" data-uid="' + e.uid + '" aria-label="Remove ' + esc(e.name) + '">×</button></div>';
+      }
+      h += '</div>';
+    }
+    h += '<div class="files-foot"><span class="faint" style="font-size:13px">Hover a file for details</span>' +
+         '<button class="btn small ghost" data-act="clear" data-scope="' + scope + '">Clear all</button></div>';
+    return h;
+  }
+
+  function reviewMod(an) {
+    if (!an) return '';
+    let h = '';
+    const song = an.song, ov = S.mod.ov;
+    if (song) {
+      const idBad = !song.id;
+      if (an.songIds && an.songIds.length > 1)
+        h += '<div class="card" style="border-color:rgba(255,94,168,.35)"><div class="body row">' +
+          '<span><b>This folder has ' + an.songIds.length + ' songs.</b> <span class="muted">Build them one at a time — pick which:</span></span>' +
+          '<select class="inp" data-act="song" style="width:auto;margin-left:auto">' +
+          an.songIds.map(i => '<option value="' + esc(i) + '"' + (i === an.songPick ? ' selected' : '') + '>' + esc(i) + '</option>').join('') +
+          '</select></div></div>';
+      h += '<div class="card"><h3>Song <span class="count">' + (song.format === 'vslice' ? 'V-Slice chart' : song.v1 ? 'Psych 1.0 chart' : 'Psych / legacy chart') + '</span></h3><div class="body">' +
+        '<div class="fields">' +
+        '<label class="f"><span>Name in Freeplay</span><input class="inp" data-field="name" value="' + esc(ov.name != null ? ov.name : song.name) + '"></label>' +
+        '<label class="f"><span>Mod folder</span><div class="with-prefix"><span class="pre">mods/</span><input class="inp' + (idBad ? ' bad' : '') + '" data-field="id" value="' + esc(ov.id != null ? ov.id : song.id) + '" spellcheck="false"></div></label>' +
+        '<label class="f"><span>Artist</span><input class="inp" data-field="artist" value="' + esc(ov.artist != null ? ov.artist : (song.artist || '')) + '"></label>' +
+        '<label class="f"><span>Freeplay colour</span><div class="color-row"><input type="color" data-field="color" value="' + esc(song.color) + '"><span class="mono faint">' + esc(song.color) + '</span></div></label>' +
+        '</div><div class="facts">' +
+        (song.bpm ? '<span class="chip dim">' + (+song.bpm).toFixed(song.bpm % 1 ? 2 : 0) + ' BPM</span>' : '') +
+        (song.stage ? '<span class="chip dim">stage: ' + esc(song.stage) + '</span>' : '') +
+        (song.variants[0].events ? '<span class="chip dim">' + song.variants[0].events + ' camera events</span>' : '') +
+        (song.variants.length > 1 ? '<span class="chip pink">' + (song.variants.length - 1) + ' variation' + (song.variants.length > 2 ? 's' : '') + '</span>' : '') +
+        '</div><div class="diffs">';
+      for (const v of song.variants) {
+        h += '<div class="diffline"><span class="vname">' + (v.key ? esc(v.key) : 'difficulties') + '</span>';
+        for (const d of v.diffs) {
+          const c = v.counts[d], sp = v.speeds && v.speeds[d];
+          h += '<span class="dchip"><b>' + esc(d) + '</b> <span class="faint">' + (c ? c.total + ' notes' : '') + (sp ? ' · speed ' + sp : '') + '</span></span>';
+        }
+        h += '</div>';
+      }
+      h += '</div></div></div>';
+
+      // characters
+      h += '<div class="card"><h3>Characters <span class="count">' + an.chars.length + '</span></h3>';
+      for (const c of an.chars) h += charHTML(c);
+      h += '</div>';
+
+      // audio
+      h += '<div class="card"><h3>Audio <span class="count">' + an.audio.length + ' file' + (an.audio.length === 1 ? '' : 's') + '</span></h3><div class="body"><ul class="list">';
+      for (const chk of an.audioChecks)
+        h += '<li><span class="ic ' + (chk.ok ? 'ok' : chk.soft ? 'warn' : 'err') + '">' + (chk.ok ? '✓' : '!') + '</span><span>' + esc(chk.label) + '</span>' +
+             (chk.ok ? '' : '<span class="faint">— add <code>' + esc(chk.file) + '.ogg</code></span>') + '</li>';
+      for (const a of an.audio) if (a.e.name !== a.out)
+        h += '<li><span class="ic dim">→</span><span class="faint"><code>' + esc(a.e.name) + '</code> will be named <code>' + esc(a.out) + '</code></span></li>';
+      h += '</ul></div></div>';
+
+      // background
+      h += '<div class="card"><h3>Background</h3><div class="body"><div class="bgpick">' +
+        '<div class="thumb" id="bg-thumb">' + (an.bg ? '' : 'none') + '</div><div>';
+      if (an.stage && an.stage.kind === 'vslice' && an.props.length) {
+        h += '<p style="margin:0 0 10px">The stage file brings <b>' + an.props.length + ' layer' + (an.props.length === 1 ? '' : 's') + '</b>, so they\'re used as the background.</p>';
+      }
+      if (an.bgCandidates.length) {
+        h += '<select class="inp" data-act="bg"><option value="none"' + (an.bgChoice === 'none' ? ' selected' : '') + '>No background</option>';
+        for (const e of an.bgCandidates) h += '<option value="' + e.uid + '"' + (an.bgChoice === e.uid ? ' selected' : '') + '>' + esc(e.name) + '</option>';
+        h += '</select><p class="faint" style="font-size:13px;margin:8px 0 0">Goes behind everyone and moves with the camera, sized so its edges never show. Fine-tune it in the game with <b>E</b>.</p>';
+      } else h += '<p class="muted" style="margin:0">No background image dropped. That\'s fine — add a <code>bg.png</code> to the mod folder any time.</p>';
+      if (an.stage && an.stage.kind === 'psych') h += '<p class="faint" style="font-size:13px;margin:8px 0 0">Character positions come from the Psych stage file.</p>';
+      h += '</div></div></div></div>';
+    }
+
+    // checks
+    const errs = an.errors, warns = an.warnings, notes = an.notes;
+    h += '<div class="card checks"><h3>Checks</h3><div class="body"><ul class="list">';
+    for (const m of errs) h += '<li><span class="ic err">✕</span><span>' + esc(m) + '</span></li>';
+    for (const m of warns) h += '<li><span class="ic warn">!</span><span>' + esc(m) + '</span></li>';
+    for (const m of notes) h += '<li><span class="ic dim">i</span><span class="muted">' + esc(m) + '</span></li>';
+    if (!errs.length && !warns.length) h += '<li class="allgood"><span class="ic ok">✓</span><span>Everything the song needs is here.</span></li>';
+    h += '</ul></div></div>';
+    return h;
+  }
+
+  function charHTML(c) {
+    const role = c.roles.join(' · ');
+    const chip = c.source === 'builtin' ? '<span class="chip ok">built-in</span>'
+      : c.source === 'none' ? '<span class="chip warn">missing</span>'
+      : c.source === 'json' ? '<span class="chip ok">sheet + JSON</span>' : '<span class="chip ok">sheet</span>';
+    let h = '<div class="char"><div class="pv">' +
+      (c.sheet && c.sheet.png ? '<canvas data-preview="' + esc(c.name) + '" width="184" height="184"></canvas>'
+        : '<div class="glyph">' + (c.source === 'builtin' ? 'built into<br>H-Slice' : 'no sheet') + '</div>') +
+      '</div><div><div class="char-head"><span class="char-name">' + esc(c.name) + '</span><span class="char-role">' + esc(role) + '</span>' + chip +
+      '<div class="char-src"><select class="inp" data-act="char" data-char="' + esc(c.name) + '" aria-label="Sheet for ' + esc(c.name) + '">';
+    for (const o of c.options) h += '<option value="' + esc(o.value) + '"' + (o.value === c.choice ? ' selected' : '') + '>' + esc(o.label) + '</option>';
+    h += '</select></div></div>';
+    if (c.sheet && c.animRows.length) {
+      if (c.source === 'json') {
+        h += '<div class="janims">';
+        for (const r of c.animRows) h += '<span class="chip ' + (r.frames ? 'ok' : 'warn') + '" title="' + esc(r.prefix) + '">' + esc(r.anim) + (r.frames ? ' · ' + r.frames : ' · not in sheet') + '</span>';
+        h += '</div>';
+      } else {
+        h += '<div class="anims">';
+        const opts = c.sheet.prefixes.slice().sort((a, b) => a.prefix.localeCompare(b.prefix));
+        for (const r of c.animRows) {
+          h += '<div class="anim ' + (r.prefix ? 'ok' : 'missing') + '"><span class="an"><span class="dot"></span>' + esc(r.anim) + (r.prefix ? ' <span class="faint">' + r.frames + ' frames</span>' : '') + '</span>' +
+            '<select class="inp" data-act="anim" data-char="' + esc(c.name) + '" data-anim="' + esc(r.anim) + '"><option value="">— none —</option>';
+          for (const p of opts) h += '<option value="' + esc(p.prefix) + '"' + (p.prefix === r.prefix ? ' selected' : '') + '>' + esc(p.prefix) + ' (' + p.count + ')</option>';
+          h += '</select></div>';
+        }
+        h += '</div>';
+      }
+    }
+    for (const n of c.notes) h += '<div class="char-note ' + (n.t === 'warn' ? 'warn' : '') + '">' + esc(n.m) + '</div>';
+    return h + '</div></div>';
+  }
+
+  function reviewEngine(r) {
+    if (!r) return '';
+    let h = '<div class="card"><h3>Where everything goes <span class="count">' + r.rows.length + '</span></h3><div class="body table-wrap"><table class="etable">';
+    for (const row of r.rows) h += '<tr><td class="src">' + esc(row.e.name) + '</td><td class="faint">→</td><td class="dst">' + esc(row.dst) + '</td></tr>';
+    if (!r.rows.length) h += '<tr><td class="muted">Nothing yet.</td></tr>';
+    h += '</table></div></div>';
+    if (r.sheets.length) h += '<div class="card"><h3>Spritesheets in sprites.js</h3><div class="body"><ul class="list">' +
+      r.sheets.map(s => '<li><span class="ic ok">✓</span><span><code>' + esc(s.key) + '</code> <span class="faint">— ' + s.frames.length + ' frames' + (s.bom ? ', BOM removed' : '') + '</span></span></li>').join('') +
+      '</ul><p class="faint" style="font-size:13px;margin:10px 0 0">sprites.js replaces any you already have, so drop every engine sheet here together.</p></div></div>';
+    h += '<div class="card checks"><h3>Checks</h3><div class="body"><ul class="list">';
+    for (const m of r.errors) h += '<li><span class="ic err">✕</span><span>' + esc(m) + '</span></li>';
+    for (const m of r.warnings) h += '<li><span class="ic warn">!</span><span>' + esc(m) + '</span></li>';
+    for (const m of r.notes) h += '<li><span class="ic dim">i</span><span class="muted">' + esc(m) + '</span></li>';
+    if (!r.errors.length && !r.warnings.length) h += '<li class="allgood"><span class="ic ok">✓</span><span>Ready.</span></li>';
+    return h + '</ul></div></div>';
+  }
+
+  function renderBar(scope) {
+    const st = S[scope], an = st.an, bar = $('#bar-' + scope);
+    const errs = an ? an.errors.length : 1;
+    let label, sub;
+    if (scope === 'mod') {
+      const song = an && an.song;
+      label = errs ? 'Fix ' + errs + ' problem' + (errs === 1 ? '' : 's') + ' to build' : 'Ready to build';
+      sub = errs ? 'They\'re listed under Checks.' : (an.warnings.length ? an.warnings.length + ' warning' + (an.warnings.length === 1 ? '' : 's') + ' — it\'ll still play' : 'Nothing missing');
+      bar.innerHTML = '<div class="status">' + esc(label) + '<small>' + esc(sub) + '</small></div>' +
+        '<button class="btn primary big" data-act="build" data-scope="mod"' + (errs ? ' disabled' : '') + '>Build ' + esc(song && song.id ? song.id : 'mod') + '.zip</button>';
+    } else {
+      label = errs ? 'Nothing to build yet' : 'Ready to build';
+      sub = errs ? an.errors[0] : an.rows.length + ' file' + (an.rows.length === 1 ? '' : 's') + ' into engineassets';
+      bar.innerHTML = '<div class="status">' + esc(label) + '<small>' + esc(sub) + '</small></div>' +
+        '<button class="btn primary big" data-act="build" data-scope="engine"' + (errs ? ' disabled' : '') + '>Build engineassets.zip</button>';
+    }
+  }
+
+  function renderResult(scope) {
+    const st = S[scope], el = $('#result-' + scope), b = st.built;
+    if (!b) { el.hidden = true; return; }
+    el.hidden = false;
+    if (scope === 'mod') {
+      const tree = 'h-slice/\n├─ index.html\n├─ engineassets/\n│  └─ mods.js        ← add the line\n└─ mods/\n   └─ ' + b.id + '/          ← this folder\n' +
+        b.files.map((f, i, a) => '      ' + (i === a.length - 1 ? '└─ ' : '├─ ') + f.path.slice(b.id.length + 1)).join('\n');
+      el.innerHTML = '<div class="body"><div class="done">✓ Built ' + esc(b.name) + ' <span class="faint" style="font-weight:400;font-size:15px">· ' + b.files.length + ' files · ' + Core.fmtSize(b.size) + '</span></div>' +
+        '<ol class="steps">' +
+        '<li>Open <b>' + esc(b.name) + '</b> and drag the <b>' + esc(b.id) + '</b> folder into <code>h-slice/mods/</code>. (No <code>mods</code> folder yet? Make one next to <code>index.html</code>.)</li>' +
+        '<li>Add this line to <code>h-slice/engineassets/mods.js</code> — one line per mod:' +
+        '<div class="codeline"><code>' + esc(b.line) + '</code><button class="btn small" data-act="copy" data-text="' + esc(b.line) + '">Copy</button></div>' +
+        '<div class="row" style="margin-top:8px"><span class="faint" style="font-size:13px">No mods.js yet?</span><button class="btn small ghost" data-act="dl-modsjs" data-text="' + esc(b.line) + '">Download a mods.js with this line</button></div></li>' +
+        '<li>Open <code>index.html</code>. <b>' + esc(st.an.song.name) + '</b> is in Freeplay. Press <b>E</b> in the song to arrange the stage, <b>S</b> to save it.</li>' +
+        '</ol><div class="tree">' + esc(tree) + '</div>' +
+        '<div class="row" style="margin-top:14px"><button class="btn" data-act="download" data-scope="mod">Download again</button></div></div>';
+    } else {
+      el.innerHTML = '<div class="body"><div class="done">✓ Built ' + esc(b.name) + ' <span class="faint" style="font-weight:400;font-size:15px">· ' + b.files.length + ' files · ' + Core.fmtSize(b.size) + '</span></div>' +
+        '<ol class="steps"><li>Open <b>engineassets.zip</b> and drag its <b>engineassets</b> folder next to <code>index.html</code>. When asked, choose to <b>merge</b> / replace — your mods.js and other files stay.</li>' +
+        '<li>Reload <code>index.html</code> (Ctrl+Shift+R).</li></ol>' +
+        '<div class="row" style="margin-top:6px"><button class="btn" data-act="download" data-scope="engine">Download again</button></div></div>';
+    }
+  }
+
+  // character previews: the first frame of the idle, drawn straight from the sheet
+  async function bitmapFor(entry) {
+    if (S.bitmaps.has(entry.uid)) return S.bitmaps.get(entry.uid);
+    const p = (async () => {
+      try { return typeof createImageBitmap === 'function' ? await createImageBitmap(new Blob([entry.bytes], { type: 'image/png' })) : null; }
+      catch (e) { return null; }
+    })();
+    S.bitmaps.set(entry.uid, p);
+    return p;
+  }
+  async function paintPreviews() {
+    const an = S.mod.an; if (!an) return;
+    for (const cv of document.querySelectorAll('canvas[data-preview]')) {
+      const c = an.chars.find(x => x.name === cv.dataset.preview);
+      if (!c || !c.sheet || !c.sheet.png) continue;
+      const bmp = await bitmapFor(c.sheet.png);
+      const g = cv.getContext && cv.getContext('2d');
+      if (!g) continue;                   // canvas blocked (privacy settings): skip the preview, not the page
+      g.clearRect(0, 0, cv.width, cv.height);
+      if (!bmp) { g.fillStyle = '#6e6288'; g.font = '22px sans-serif'; g.textAlign = 'center'; g.fillText('can\'t read png', 92, 96); continue; }
+      const pre = c.source === 'json' ? ((c.animRows.find(r => r.anim === 'idle' && r.frames) || c.animRows.find(r => r.frames) || {}).prefix)
+                                       : (c.anims.idle || c.anims.danceLeft || Object.values(c.anims).find(Boolean));
+      const fr = (pre && Core.framesFor(c.sheet.frames, pre)[0]) || c.sheet.frames[0];
+      if (!fr) continue;
+      const k = Math.min((cv.width - 12) / fr.fw, (cv.height - 12) / fr.fh);
+      const ox = (cv.width - fr.fw * k) / 2, oy = (cv.height - fr.fh * k) / 2;
+      g.drawImage(bmp, fr.x, fr.y, fr.w, fr.h, ox - fr.fx * k, oy - fr.fy * k, fr.w * k, fr.h * k);
+    }
+    const t = $('#bg-thumb');
+    if (t && an.bg) {
+      if (!S.thumbs.has(an.bg.uid)) S.thumbs.set(an.bg.uid, URL.createObjectURL(new Blob([an.bg.bytes])));
+      t.style.backgroundImage = 'url("' + S.thumbs.get(an.bg.uid) + '")';
+    }
+  }
+
+  // ---------------------------------------------------------------- actions
+  function download(scope) {
+    const b = S[scope].built; if (!b) return;
+    if (S[scope].url) URL.revokeObjectURL(S[scope].url);
+    S[scope].url = URL.createObjectURL(b.blob);
+    const a = document.createElement('a');
+    a.href = S[scope].url; a.download = b.name;
+    document.body.appendChild(a); a.click(); a.remove();
+  }
+  function build(scope) {
+    const st = S[scope];
+    try {
+      st.built = scope === 'mod' ? Core.buildMod(st.an) : Core.buildEngine(st.an);
+      renderResult(scope);
+      download(scope);
+      $('#result-' + scope).scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } catch (err) { toast('Build failed: ' + err.message); }
+  }
+  let toastT = 0;
+  function toast(msg) {
+    const t = $('#toast'); t.textContent = msg; t.classList.add('on');
+    clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('on'), 2600);
+  }
+  async function copy(text) {
+    try { await navigator.clipboard.writeText(text); toast('Copied'); }
+    catch (e) {
+      const ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta); ta.select();
+      try { document.execCommand('copy'); toast('Copied'); } catch (e2) { toast('Select the line and copy it'); }
+      ta.remove();
+    }
+  }
+
+  function init() {
+    const app = $('#app');
+    // tabs
+    for (const b of document.querySelectorAll('.tabs button')) b.addEventListener('click', () => {
+      for (const x of document.querySelectorAll('.tabs button')) x.setAttribute('aria-selected', String(x === b));
+      for (const t of document.querySelectorAll('.tab')) t.classList.toggle('on', t.id === 'tab-' + b.dataset.tab);
+    });
+    // drop zones
+    for (const scope of ['mod', 'engine']) {
+      const d = $('#drop-' + scope);
+      d.addEventListener('dragover', e => { e.preventDefault(); d.classList.add('over'); });
+      d.addEventListener('dragleave', e => { if (!d.contains(e.relatedTarget)) d.classList.remove('over'); });
+      d.addEventListener('drop', async e => { e.preventDefault(); d.classList.remove('over'); add(scope, await fromDrop(e.dataTransfer)); });
+      d.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); S.pickFor = scope; $('#pick-files').click(); } });
+    }
+    // dropping outside a zone: send it to the visible tab instead of navigating away
+    addEventListener('dragover', e => e.preventDefault());
+    addEventListener('drop', async e => {
+      e.preventDefault();
+      if (e.target.closest && e.target.closest('.drop')) return;
+      const scope = $('#tab-mod').classList.contains('on') ? 'mod' : 'engine';
+      add(scope, await fromDrop(e.dataTransfer));
+    });
+    for (const id of ['pick-files', 'pick-dir']) $('#' + id).addEventListener('change', e => {
+      const files = [...e.target.files]; e.target.value = ''; add(S.pickFor, files);
+    });
+    // clicks
+    app.addEventListener('click', e => {
+      const el = e.target.closest('[data-act]'); if (!el || el.tagName === 'SELECT') return;
+      const act = el.dataset.act, scope = el.dataset.scope;
+      if (act === 'pick-files' || act === 'pick-dir') { S.pickFor = scope; $('#' + act).click(); }
+      else if (act === 'remove') { S[scope].entries = S[scope].entries.filter(x => x.uid !== el.dataset.uid); S[scope].built = null; analyze(scope); }
+      else if (act === 'clear') { S[scope].entries = []; S[scope].built = null; if (scope === 'mod') S.mod.ov = { chars: {}, anims: {} }; analyze(scope); }
+      else if (act === 'build') build(scope);
+      else if (act === 'download') download(scope);
+      else if (act === 'copy') copy(el.dataset.text);
+      else if (act === 'dl-modsjs') {
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(new Blob([el.dataset.text + '\n'], { type: 'text/javascript' }));
+        a.download = 'mods.js'; document.body.appendChild(a); a.click(); a.remove();
+        toast('Put mods.js in h-slice/engineassets/');
+      }
+    });
+    // choices
+    app.addEventListener('change', e => {
+      const el = e.target, ov = S.mod.ov;
+      if (el.dataset.act === 'song') { S.mod.ov = { chars: {}, anims: {}, song: el.value }; S.mod.built = null; analyze('mod'); return; }
+      if (el.dataset.act === 'char') { ov.chars[el.dataset.char] = el.value; delete ov.anims[el.dataset.char]; }
+      else if (el.dataset.act === 'anim') { (ov.anims[el.dataset.char] = ov.anims[el.dataset.char] || {})[el.dataset.anim] = el.value; }
+      else if (el.dataset.act === 'bg') ov.bg = el.value;
+      else if (el.dataset.field) ov[el.dataset.field] = el.value;
+      else return;
+      S.mod.built = null;
+      analyze('mod');
+    });
+    // typing updates the build button without re-rendering the field you're in
+    app.addEventListener('input', e => {
+      const el = e.target;
+      if (!el.dataset.field) return;
+      S.mod.ov[el.dataset.field] = el.value;
+      S.mod.built = null;
+      S.mod.an = Core.analyzeMod(S.mod.entries, S.mod.ov);
+      if (el.dataset.field === 'id') el.classList.toggle('bad', !S.mod.an.song || !S.mod.an.song.id);
+      if (el.dataset.field === 'color') { const s = el.nextElementSibling; if (s) s.textContent = el.value; }
+      renderBar('mod'); renderResult('mod');
+    });
+  }
+  return { init, S };
+})();
+
+if (typeof document !== 'undefined' && document.getElementById('app') && document.readyState !== 'loading') UI.init();
+else if (typeof document !== 'undefined' && document.addEventListener) document.addEventListener('DOMContentLoaded', () => { if (document.getElementById('app')) UI.init(); });
+</script>
+</body>
+</html>
