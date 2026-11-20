@@ -3,38 +3,18 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Friday Night Funkin' Launcher</title>
+<title>Friday Night Funkin'</title>
 <style>
-  * { box-sizing: border-box; }
-  html, body { margin: 0; min-height: 100%; background: #111; color: #fff; font-family: Arial, sans-serif; }
-  body { min-height: 100vh; display: grid; place-items: center; padding: 24px; }
-  main { text-align: center; max-width: 560px; }
-  h1 { margin: 0 0 12px; font-size: clamp(28px, 5vw, 42px); }
-  p { color: #ccc; line-height: 1.5; margin: 0 0 24px; }
-  button { border: 0; border-radius: 10px; padding: 15px 28px; background: #ff4b9a; color: #111; font-size: 18px; font-weight: 700; cursor: pointer; }
-  button:hover { background: #ff78b2; }
+  html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; background: #000; }
+  iframe { display: block; width: 100%; height: 100%; border: 0; }
 </style>
 </head>
 <body>
-<main>
-  <h1>Friday Night Funkin'</h1>
-  <p>Click below to open Friday Night Funkin' in a new tab.</p>
-  <button id="launch" type="button">Play FNF</button>
-</main>
-<script>
-(() => {
-  const gameUrl = "https://kbhgames.com/game/friday-night-funkin";
-  document.getElementById("launch").addEventListener("click", () => {
-    const gameTab = window.open("about:blank", "_blank");
-    if (!gameTab) {
-      alert("Your browser blocked the new tab. Allow pop-ups for this site, then try again.");
-      return;
-    }
-    // Navigate the new tab directly to KBH so its own embedded game
-    // loads with KBH as the top-level site, rather than inside about:blank.
-    gameTab.location.href = gameUrl;
-  });
-})();
-</script>
+<iframe
+  src="https://kbhgames.com/game/friday-night-funkin"
+  title="Friday Night Funkin' on KBH Games"
+  allow="autoplay; fullscreen; gamepad; clipboard-read; clipboard-write"
+  allowfullscreen>
+</iframe>
 </body>
 </html>
