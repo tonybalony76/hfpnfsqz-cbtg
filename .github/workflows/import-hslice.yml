@@ -51,3 +51,5 @@ jobs:
           fi
           git commit -m "Add prebuilt H-slice browser game"
           git push
+
+# Trigger the first import run after installing this workflow.
