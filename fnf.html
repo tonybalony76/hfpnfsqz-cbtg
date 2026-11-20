@@ -12,12 +12,13 @@
   h1 { margin: 0 0 12px; font-size: clamp(28px, 5vw, 42px); }
   p { color: #ccc; line-height: 1.5; margin: 0 0 24px; }
   button { border: 0; border-radius: 10px; padding: 15px 28px; background: #ff4b9a; color: #111; font-size: 18px; font-weight: 700; cursor: pointer; }
+  button:hover { background: #ff78b2; }
 </style>
 </head>
 <body>
 <main>
   <h1>Friday Night Funkin'</h1>
-  <p>Open the KBH Games player in a new about:blank tab.</p>
+  <p>Click below to open the game in an about:blank tab.</p>
   <button id="launch" type="button">Play FNF</button>
 </main>
 <script>
@@ -36,17 +37,21 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Friday Night Funkin'</title>
 <style>
-html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#000}
-iframe{display:block;width:100%;height:100%;border:0}
+*{box-sizing:border-box}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#090a0d}
+.crop{position:fixed;inset:0;overflow:hidden;aspect-ratio:1.782}
+.crop iframe{position:absolute;left:-12.85%;top:-17.7%;width:132.7%;height:117.7%;border:0}
 </style>
 </head>
 <body>
-<iframe
-  src="${gameUrl}"
-  title="Friday Night Funkin' on KBH Games"
-  sandbox="allow-scripts allow-same-origin allow-forms allow-pointer-lock allow-popups allow-presentation"
-  allow="autoplay; fullscreen; gamepad; clipboard-read; clipboard-write"
-  allowfullscreen></iframe>
+<div class="crop">
+  <iframe
+    src="${gameUrl}"
+    title="Friday Night Funkin' on KBH Games"
+    sandbox="allow-scripts allow-same-origin allow-forms allow-pointer-lock allow-popups allow-presentation"
+    allow="autoplay; fullscreen; gamepad; clipboard-read; clipboard-write"
+    allowfullscreen></iframe>
+</div>
 </body>
 </html>`;
     gameTab.document.open();
