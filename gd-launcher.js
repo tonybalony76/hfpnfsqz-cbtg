@@ -1,14 +1,12 @@
-
 (function () {
 'use strict';
 
 var BASE = 'https://cdn.jsdelivr.net/gh/Ale7208/geometry-dash-wasm/';
 var MANIFEST = BASE + 'gd_assets.json';
-
-var REPO = 'https://cdn.jsdelivr.net/gh/tonybalony76/hfpnfsqz-cbtg@main/';
-var GAME = REPO + 'index.html';
+var GAME = 'https://cdn.jsdelivr.net/gh/tonybalony76/hfpnfsqz-cbtg@main/index.html';
 
 var CACHE_NAME = 'gdwasm-assets';
+
 var status = document.getElementById('gd-status');
 var detail = document.getElementById('gd-detail');
 var bar = document.getElementById('gd-bar');
@@ -36,13 +34,13 @@ function update() {
     stopped ? 'Preloading paused.' :
     'Preloading game files…',
     done + ' of ' + total + ' files cached' +
-    (failed ? ' · ' + failed + ' failed' : '')
+    (failed ? ' · ' + failed + ' could not be cached' : '')
   );
 }
 
 async function preload() {
   if (!('caches' in window)) {
-    say('Ready to play.', 'Background caching is unavailable.');
+    say('Ready to play.', 'Background caching unavailable.');
     return;
   }
 
@@ -56,7 +54,7 @@ async function preload() {
     });
 
     if (!response.ok) {
-      throw new Error('Manifest request failed: ' + response.status);
+      throw new Error('Asset manifest HTTP ' + response.status);
     }
 
     var manifest = await response.json();
@@ -116,7 +114,6 @@ async function preload() {
             }
 
             await cache.put(url, asset.clone());
-
             success = true;
             break;
 
@@ -164,7 +161,7 @@ async function preload() {
     if (!stopped) {
       say(
         'Preloading could not finish.',
-        'You can still launch. Missing files will download when needed.'
+        'You can still launch. Missing files will download normally.'
       );
     }
   }
@@ -183,7 +180,7 @@ function openGame() {
 
   if (button) button.disabled = true;
 
-  say('Opening Geometry Dash…', 'Loading game files.');
+  say('Opening Geometry Dash…', 'Loading game page.');
 
   fetch(GAME + '?launcher=1', {
     cache: 'no-cache',
@@ -191,34 +188,22 @@ function openGame() {
   })
   .then(function (response) {
     if (!response.ok) {
-      throw new Error('Game page failed: HTTP ' + response.status);
+      throw new Error('Game page HTTP ' + response.status);
     }
 
     return response.text();
   })
   .then(function (source) {
-    var baseTag = '<base href="' + REPO + '">';
-
-    if (/<base\b/i.test(source)) {
-      source = source.replace(/<base\b[^>]*>/i, baseTag);
-    } else if (/<head[^>]*>/i.test(source)) {
-      source = source.replace(/<head[^>]*>/i, function (head) {
-        return head + baseTag;
-      });
-    } else {
-      source = baseTag + source;
-    }
-
     tab.document.open();
     tab.document.write(source);
     tab.document.close();
 
-    say('Geometry Dash opened!', 'You can close this launcher.');
+    say('Game opened!', 'You can close this launcher.');
   })
   .catch(function (error) {
     try {
       tab.document.body.textContent =
-        'Could not load Geometry Dash: ' + error.message;
+        'Could not load the game: ' + error.message;
     } catch (e) {}
 
     if (button) button.disabled = false;
