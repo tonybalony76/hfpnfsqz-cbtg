@@ -930,7 +930,7 @@ button,input,textarea{touch-action:manipulation;}
   }
   function version() { return typeof GD_BUILD_ID === 'string' ? GD_BUILD_ID : 'dev'; }
   function manifest() {
-    if (!manifestPromise) manifestPromise = fetch('gd_assets.json?v=' + version(), {cache: 'no-cache'})
+    if (!manifestPromise) manifestPromise = fetch('https://cdn.jsdelivr.net/gh/Ale7208/geometry-dash-wasm/gd_assets.json?v=' + version(), {cache: 'no-cache'})
       .then(function (r) { if (!r.ok) throw new Error('Asset manifest HTTP ' + r.status); return r.json(); });
     return manifestPromise;
   }
